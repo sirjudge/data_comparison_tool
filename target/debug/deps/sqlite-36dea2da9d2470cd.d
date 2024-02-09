@@ -1,0 +1,12 @@
+/home/nico/RustroverProjects/data_comparison_tool/target/debug/deps/libsqlite-36dea2da9d2470cd.rmeta: /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/lib.rs /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/error.rs /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/value.rs /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/connection.rs /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/cursor.rs /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/statement.rs
+
+/home/nico/RustroverProjects/data_comparison_tool/target/debug/deps/libsqlite-36dea2da9d2470cd.rlib: /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/lib.rs /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/error.rs /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/value.rs /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/connection.rs /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/cursor.rs /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/statement.rs
+
+/home/nico/RustroverProjects/data_comparison_tool/target/debug/deps/sqlite-36dea2da9d2470cd.d: /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/lib.rs /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/error.rs /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/value.rs /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/connection.rs /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/cursor.rs /home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/statement.rs
+
+/home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/lib.rs:
+/home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/error.rs:
+/home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/value.rs:
+/home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/connection.rs:
+/home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/cursor.rs:
+/home/nico/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sqlite-0.33.0/src/statement.rs:

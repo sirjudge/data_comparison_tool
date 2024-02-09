@@ -1,0 +1,144 @@
+cargo:rerun-if-env-changed=SQLITE3_NO_PKG_CONFIG
+cargo:rerun-if-env-changed=PKG_CONFIG_x86_64-unknown-linux-gnu
+cargo:rerun-if-env-changed=PKG_CONFIG_x86_64_unknown_linux_gnu
+cargo:rerun-if-env-changed=HOST_PKG_CONFIG
+cargo:rerun-if-env-changed=PKG_CONFIG
+cargo:rerun-if-env-changed=SQLITE3_STATIC
+cargo:rerun-if-env-changed=SQLITE3_DYNAMIC
+cargo:rerun-if-env-changed=PKG_CONFIG_ALL_STATIC
+cargo:rerun-if-env-changed=PKG_CONFIG_ALL_DYNAMIC
+cargo:rerun-if-env-changed=PKG_CONFIG_PATH_x86_64-unknown-linux-gnu
+cargo:rerun-if-env-changed=PKG_CONFIG_PATH_x86_64_unknown_linux_gnu
+cargo:rerun-if-env-changed=HOST_PKG_CONFIG_PATH
+cargo:rerun-if-env-changed=PKG_CONFIG_PATH
+cargo:rerun-if-env-changed=PKG_CONFIG_LIBDIR_x86_64-unknown-linux-gnu
+cargo:rerun-if-env-changed=PKG_CONFIG_LIBDIR_x86_64_unknown_linux_gnu
+cargo:rerun-if-env-changed=HOST_PKG_CONFIG_LIBDIR
+cargo:rerun-if-env-changed=PKG_CONFIG_LIBDIR
+cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR_x86_64-unknown-linux-gnu
+cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR_x86_64_unknown_linux_gnu
+cargo:rerun-if-env-changed=HOST_PKG_CONFIG_SYSROOT_DIR
+cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR
+TARGET = Some("x86_64-unknown-linux-gnu")
+OPT_LEVEL = Some("0")
+HOST = Some("x86_64-unknown-linux-gnu")
+cargo:rerun-if-env-changed=CC_x86_64-unknown-linux-gnu
+CC_x86_64-unknown-linux-gnu = None
+cargo:rerun-if-env-changed=CC_x86_64_unknown_linux_gnu
+CC_x86_64_unknown_linux_gnu = None
+cargo:rerun-if-env-changed=HOST_CC
+HOST_CC = None
+cargo:rerun-if-env-changed=CC
+CC = None
+cargo:rerun-if-env-changed=CRATE_CC_NO_DEFAULTS
+CRATE_CC_NO_DEFAULTS = None
+DEBUG = Some("true")
+CARGO_CFG_TARGET_FEATURE = Some("fxsr,sse,sse2")
+cargo:rerun-if-env-changed=CFLAGS_x86_64-unknown-linux-gnu
+CFLAGS_x86_64-unknown-linux-gnu = None
+cargo:rerun-if-env-changed=CFLAGS_x86_64_unknown_linux_gnu
+CFLAGS_x86_64_unknown_linux_gnu = None
+cargo:rerun-if-env-changed=HOST_CFLAGS
+HOST_CFLAGS = None
+cargo:rerun-if-env-changed=CFLAGS
+CFLAGS = None
+running: "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-4" "-fno-omit-frame-pointer" "-m64" "-Wall" "-Wextra" "-o" "/home/nico/RustroverProjects/data_comparison_tool/target/debug/build/sqlite3-src-f271e4357d0bfb9b/out/source/sqlite3.o" "-c" "source/sqlite3.c"
+cargo:warning=source/sqlite3.c: In function ‘sqlite3VdbeExec’:
+
+cargo:warning=source/sqlite3.c:96200:50: warning: this statement may fall through [-Wimplicit-fallthrough=]
+
+cargo:warning=96200 |                    zPayload[6] = (u8)(v&0xff); v >>= 8;
+
+cargo:warning=      |                                                ~~^~~~~
+
+cargo:warning=source/sqlite3.c:96201:11: note: here
+
+cargo:warning=96201 |           case 6:  zPayload[5] = (u8)(v&0xff); v >>= 8;
+
+cargo:warning=      |           ^~~~
+
+cargo:warning=source/sqlite3.c:96202:50: warning: this statement may fall through [-Wimplicit-fallthrough=]
+
+cargo:warning=96202 |                    zPayload[4] = (u8)(v&0xff); v >>= 8;
+
+cargo:warning=      |                                                ~~^~~~~
+
+cargo:warning=source/sqlite3.c:96203:11: note: here
+
+cargo:warning=96203 |           case 4:  zPayload[3] = (u8)(v&0xff); v >>= 8;
+
+cargo:warning=      |           ^~~~
+
+cargo:warning=source/sqlite3.c:96203:50: warning: this statement may fall through [-Wimplicit-fallthrough=]
+
+cargo:warning=96203 |           case 4:  zPayload[3] = (u8)(v&0xff); v >>= 8;
+
+cargo:warning=      |                                                ~~^~~~~
+
+cargo:warning=source/sqlite3.c:96204:11: note: here
+
+cargo:warning=96204 |           case 3:  zPayload[2] = (u8)(v&0xff); v >>= 8;
+
+cargo:warning=      |           ^~~~
+
+cargo:warning=source/sqlite3.c:96204:50: warning: this statement may fall through [-Wimplicit-fallthrough=]
+
+cargo:warning=96204 |           case 3:  zPayload[2] = (u8)(v&0xff); v >>= 8;
+
+cargo:warning=      |                                                ~~^~~~~
+
+cargo:warning=source/sqlite3.c:96205:11: note: here
+
+cargo:warning=96205 |           case 2:  zPayload[1] = (u8)(v&0xff); v >>= 8;
+
+cargo:warning=      |           ^~~~
+
+cargo:warning=source/sqlite3.c:96205:50: warning: this statement may fall through [-Wimplicit-fallthrough=]
+
+cargo:warning=96205 |           case 2:  zPayload[1] = (u8)(v&0xff); v >>= 8;
+
+cargo:warning=      |                                                ~~^~~~~
+
+cargo:warning=source/sqlite3.c:96206:11: note: here
+
+cargo:warning=96206 |           case 1:  zPayload[0] = (u8)(v&0xff);
+
+cargo:warning=      |           ^~~~
+
+cargo:warning=source/sqlite3.c: In function ‘jsonTranslateTextToBlob’:
+
+cargo:warning=source/sqlite3.c:205078:7: warning: this statement may fall through [-Wimplicit-fallthrough=]
+
+cargo:warning=205078 |     if( strncmp(z+i,"null",4)==0 && !sqlite3Isalnum(z[i+4]) ){
+
+cargo:warning=       |       ^
+
+cargo:warning=source/sqlite3.c:205084:3: note: here
+
+cargo:warning=205084 |   default: {
+
+cargo:warning=       |   ^~~~~~~
+
+exit status: 0
+cargo:rerun-if-env-changed=AR_x86_64-unknown-linux-gnu
+AR_x86_64-unknown-linux-gnu = None
+cargo:rerun-if-env-changed=AR_x86_64_unknown_linux_gnu
+AR_x86_64_unknown_linux_gnu = None
+cargo:rerun-if-env-changed=HOST_AR
+HOST_AR = None
+cargo:rerun-if-env-changed=AR
+AR = None
+cargo:rerun-if-env-changed=ARFLAGS_x86_64-unknown-linux-gnu
+ARFLAGS_x86_64-unknown-linux-gnu = None
+cargo:rerun-if-env-changed=ARFLAGS_x86_64_unknown_linux_gnu
+ARFLAGS_x86_64_unknown_linux_gnu = None
+cargo:rerun-if-env-changed=HOST_ARFLAGS
+HOST_ARFLAGS = None
+cargo:rerun-if-env-changed=ARFLAGS
+ARFLAGS = None
+running: ZERO_AR_DATE="1" "ar" "cq" "/home/nico/RustroverProjects/data_comparison_tool/target/debug/build/sqlite3-src-f271e4357d0bfb9b/out/libsqlite3.a" "/home/nico/RustroverProjects/data_comparison_tool/target/debug/build/sqlite3-src-f271e4357d0bfb9b/out/source/sqlite3.o"
+exit status: 0
+running: "ar" "s" "/home/nico/RustroverProjects/data_comparison_tool/target/debug/build/sqlite3-src-f271e4357d0bfb9b/out/libsqlite3.a"
+exit status: 0
+cargo:rustc-link-lib=static=sqlite3
+cargo:rustc-link-search=native=/home/nico/RustroverProjects/data_comparison_tool/target/debug/build/sqlite3-src-f271e4357d0bfb9b/out
