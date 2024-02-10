@@ -2,9 +2,16 @@ use async_std::task::block_on;
 
 mod data;
 
+
 fn main() {
     parse_arguments();
     block_on(data::create_sqlite_db());
+
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(data::pull_data());
 }
 
 fn parse_arguments(){
@@ -20,7 +27,6 @@ fn parse_arguments(){
             let flag = split_string.next();
             let value = split_string.next();
             println!("Flag:{:?} Value:{:?}",flag,value);
-
         }
     }
 }
