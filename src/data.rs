@@ -15,22 +15,22 @@ pub(crate) async fn create_sqlite_db(){
     }
 }
 
-
 async fn connect_to_mysql_db() -> Result<Pool<MySql>, Error>{
-    let db_url ="mysql://root:verysecurepassword@0.0.0.0:3306";  
-    return MySqlPoolOptions::new()
-        .acquire_timeout(std::time::Duration::from_secs(2))
-        .max_connections(5)
+    println!("attempting to connect to mysql db");
+    let db_url ="mysql://root:verysecurepassword@localhost";  
+    let result = MySqlPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_secs(5))
         .connect(db_url)
         .await;
+    println!("connected to mysql db: {:?}", result); 
+    return result;
 }
 
 pub(crate) async fn pull_data(){
-    println!("connecting to mysql db");
     let result = task::block_on(connect_to_mysql_db());
     match result {
         Ok(pool) => {
-            println!("connected to mysql db, attempting to select");
+            println!("running select query");
             let row = sqlx::query("SELECT 1")
                 .fetch_one(&pool)
                 .await

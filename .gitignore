@@ -5,6 +5,7 @@ target/
 # ignore db files
 *.db
 *.sqlite
+*.sqlite3
 
 # ignore logs
 *.log
