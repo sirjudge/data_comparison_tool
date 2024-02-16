@@ -1,14 +1,33 @@
+use std::borrow::Borrow;
+
 use async_std::task;
-use sqlx::{ mysql::MySqlPoolOptions, sqlite::SqlitePoolOptions, Error, MySql, Pool, Sqlite};
+use sqlx::{ migrate::MigrateDatabase, mysql::MySqlPoolOptions, sqlite::SqlitePoolOptions, Error, MySql, Pool};
 
 pub(crate) async fn create_sqlite_db(){
-    let db_url = "sqlite:db.sqlite3";
+    let db_url = "sqlite://./db.sqlite3";
 
-    let sqlite_pool_result = SqlitePoolOptions::new()
+    if !sqlx::Sqlite::database_exists(db_url).await.unwrap(){
+        println!("creating sqlite db");
+        sqlx::Sqlite::create_database(db_url).await.unwrap(); 
+    }
+
+    let result = SqlitePoolOptions::new()
         .acquire_timeout(std::time::Duration::from_secs(30))
-        .connect(db_url).await
-        .unwrap();
-    println!("connected to sqlite db: {:?}", sqlite_pool_result);
+        .connect(db_url).await;
+
+    match result {
+        Ok(pool) => {
+            println!("connected to sqlite db");
+            let row = sqlx::query("SELECT 1")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            
+        }
+        Err(error) => {
+            println!("error: {}", error);
+        }
+    }
 }
 
 
