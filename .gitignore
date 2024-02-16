@@ -9,3 +9,7 @@ target/
 
 # ignore logs
 *.log
+
+# docker
+docker/
+

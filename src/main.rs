@@ -2,16 +2,15 @@ use async_std::task::block_on;
 
 mod data;
 
-
 fn main() {
-    parse_arguments();
+    // handle input arguments
+    // parse_arguments();
+
+    // create sqlite db if it's not already there
     block_on(data::create_sqlite_db());
 
-    tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap()
-        .block_on(data::pull_data());
+    // pull data
+    block_on(data::pull_data());
 }
 
 fn parse_arguments(){
@@ -26,6 +25,7 @@ fn parse_arguments(){
             let mut split_string = arg.split("=");
             let flag = split_string.next();
             let value = split_string.next();
+            std::env::set_var(flag.unwrap(), value.unwrap());
             println!("Flag:{:?} Value:{:?}",flag,value);
         }
     }
