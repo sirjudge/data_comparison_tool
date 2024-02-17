@@ -3,14 +3,7 @@ use async_std::task::block_on;
 mod data;
 
 fn main() {
-    // handle input arguments
-    // parse_arguments();
-
-    // create sqlite db if it's not already there
-    block_on(data::create_sqlite_db());
-
-    // pull data
-    block_on(data::pull_data());
+    parse_arguments();
 }
 
 fn parse_arguments(){
@@ -18,6 +11,7 @@ fn parse_arguments(){
     let arguments = std::env::args();
 
     // loop over each argument
+    // first argument is the name of the program so we can ignore it
     for arg in arguments{
         println!("argument:{}",arg);
         // if arg contains '=' split the flag + value and print
@@ -27,6 +21,19 @@ fn parse_arguments(){
             let value = split_string.next();
             std::env::set_var(flag.unwrap(), value.unwrap());
             println!("Flag:{:?} Value:{:?}",flag,value);
+        }
+        else {
+            match arg.as_str() {
+                "-h" => {
+                    println!("Tool to do cool datat things");
+                }
+                "-v" => {
+                    println!("Version: 0.1.0");
+                }
+                &_ => {
+                    println!("Unknown argument:{}",arg);
+                }
+            }
         }
     }
 }
