@@ -1,4 +1,4 @@
-use sqlx::{ migrate::MigrateDatabase, mysql::MySqlPoolOptions, sqlite::SqlitePoolOptions, Error, MySql, Pool};
+use sqlx::{ migrate::MigrateDatabase, mysql::MySqlPoolOptions, sqlite::SqlitePoolOptions, MySql, Pool};
 
 
 async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
