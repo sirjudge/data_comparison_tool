@@ -1,4 +1,4 @@
-use sqlx::{ migrate::MigrateDatabase, mysql::MySqlPoolOptions, sqlite::SqlitePoolOptions, MySql, Pool};
+use sqlx::{ migrate::MigrateDatabase, mysql::{MySqlPoolOptions, MySqlRow}, sqlite::{SqlitePoolOptions, SqliteRow}, MySql, Pool, Row};
 
 
 async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
@@ -23,13 +23,25 @@ async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
 }
 
 
-pub(crate) async fn query_sqlite(query_string: &str){
+pub(crate) async fn query_sqlite(query_string: &str) -> Vec<SqliteRow> {
     let pool = get_sqlite_connection().await;
     println!("connected to sqlite db");
-    let row = sqlx::query(query_string)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+    let rows = sqlx::query(query_string)
+        .fetch_all(&pool)
+        .await;
+    match rows {
+        Ok(rows) => {
+            if rows.is_empty(){
+                panic!("no rows returned");
+            }
+            else{
+                return rows;
+            }
+        }
+        Err(error) => {
+            panic!("error: {:?}", error);
+        }
+    }
 }
 
 
@@ -49,10 +61,22 @@ async fn get_mysql_connection() -> Pool<MySql>{
     }
 }
 
-pub(crate) async fn query_mysql(query_string: &str){
+pub(crate) async fn query_mysql(query_string: &str) -> Vec<MySqlRow> {
     let pool = get_mysql_connection().await;
-    let row = sqlx::query(query_string)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+    let rows = sqlx::query(query_string)
+        .fetch_all(&pool)
+        .await;
+    match rows{
+        Ok(rows) => {
+            if rows.is_empty(){
+                panic!("no rows returned");
+            }
+            else {
+                return rows;
+            }
+        }
+        Err(error) => {
+            panic!("error: {:?}", error);
+        }
+    }
 }

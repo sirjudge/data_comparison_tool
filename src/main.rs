@@ -1,9 +1,18 @@
 use async_std::task::block_on;
+use sqlx::Row;
 
 mod data;
 
 fn main() {
     parse_arguments();
+
+    let query = "select 1 as number";
+    let sqlite_row = block_on(data::query_sqlite(query));
+    println!(" returned # of sqlite rows: {:?}",sqlite_row.len());
+
+    let query = "select 1 as number";
+    let mysql_rows = block_on(data::query_mysql(query));
+    println!(" returned # of mysql rows: {:?}",mysql_rows.len());
 }
 
 fn parse_arguments(){
