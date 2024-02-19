@@ -109,10 +109,10 @@ pub(crate) async fn create_new_data(i: i32){
         let insert_query = "INSERT INTO test_table (randomNumber,secondRandomNumber,randomString,secondRandomString) 
             VALUES (?,?,?,?)";
         let result = sqlx::query(insert_query)
-            .bind(RandomLong(100))
-            .bind(RandomLong(100))
-            .bind(RandomString(50))
-            .bind(RandomString(50))
+            .bind(random_long(100))
+            .bind(random_long(100))
+            .bind(random_string(50))
+            .bind(random_string(50))
             .execute(&pool)
             .await;
         match result {
@@ -126,13 +126,13 @@ pub(crate) async fn create_new_data(i: i32){
     }
 }
 
-fn RandomLong(max: i32) -> i32 {
+fn random_long(max: i32) -> i32 {
     let mut rng = rand::thread_rng();
     let n: i32 = rng.gen_range(1..max);
     return n;
 }
 
-fn RandomString(len: usize) -> String {
+fn random_string(len: usize) -> String {
     let mut rng = thread_rng();
     let characters: Vec<char> = "abcdefghijklmnopqrstuvwxyz".chars().collect();
     let mut result = String::new();
