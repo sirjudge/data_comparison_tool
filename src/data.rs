@@ -81,45 +81,64 @@ pub(crate) async fn query_mysql(query_string: &str) -> Vec<MySqlRow> {
 }
 
 
-pub(crate) async fn mysql_to_sqlite(mysql_rows: Vec<MySqlRow>){
-    // init insert query string
-    let mut insert_query = "create table if not exists test_table (".to_string();
-   
-    // for each column in the first mysql row generate the column name and type
-    for column in mysql_rows[0].columns() {
-        insert_query.push_str(&column.name());
-        insert_query.push_str(" ");
-        let mysql_column_type = column.type_info().name();
-        let sqlite_type = mysql_type_to_sqlite_type(mysql_column_type);
-        println!("mysql_column_type:{} sqlite_type:{}",mysql_column_type,sqlite_type);
-        insert_query.push_str(&sqlite_type);
-        insert_query.push_str(",");
-    }
-
-    // pop the last char off the string (,) and insert closing parens
-    insert_query.pop();
-    insert_query.push_str(")");
-    println!("insert_query:{}",insert_query);
+pub(crate) async fn mysql_to_sqlite(mysql_rows: &Vec<MySqlRow>){
 
     // open a new sqlite connection and execute the create statment
     let sqlite_pool = get_sqlite_connection().await;
-    let result = sqlx::query(insert_query.as_str())
-        .execute(&sqlite_pool)
+    if create_new_sqlite_table(mysql_rows, &sqlite_pool).await {
+        println!("created new sqlite table");
+        let insert_query = create_sqlite_insert_query(mysql_rows);
+        let result = sqlx::query(insert_query.as_str())
+            .execute(&sqlite_pool)
+            .await;
+    }
+    else {
+        panic!("unable to create new sqlite table");
+    } 
+
+    drop(sqlite_pool);
+    drop(mysql_rows);
+}
+
+// generates a new sqlite table from a passed in mysql row
+async fn create_new_sqlite_table(mysql_rows: &Vec<MySqlRow>, sqlite_pool: &Pool<sqlx::Sqlite>) -> bool {
+    // init insert query string
+    let mut create_query  = "create table if not exists test_table (".to_string();
+   
+    // for each column in the first mysql row generate the column name and type
+    for column in mysql_rows[0].columns(){
+        create_query.push_str(&column.name());
+        create_query.push_str(" ");
+        let mysql_column_type = column.type_info().name();
+        let sqlite_type = mysql_type_to_sqlite_type(mysql_column_type);
+        create_query.push_str(&sqlite_type);
+        create_query.push_str(",");
+    }
+
+    // pop the last char off the string (,) and insert closing parens
+    create_query.pop();
+    create_query.push_str(")");
+    let result = sqlx::query(create_query.as_str())
+        .execute(sqlite_pool)
         .await;
     match result {
         Ok(_) => {
-            println!("created new table in sqlite");
+            return true;
         }
         Err(error) => {
             panic!("error occurred while generating the new sqlite table: {:?}", error);
         }
     }
+}
 
+// generates a new sqlite insert query from a passed in mysql row
+fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>) -> String {
 
     // for each row in mysql generate the insert statement
-    // TODO: wrap this in a transaction later
+    let mut insert_query = "insert into test_table (".to_string();
+
+    // foreach row in the mysql result set generate the insert query
     for row in mysql_rows {
-        let mut insert_query = "insert into test_table (".to_string();
         let mut values = "values (".to_string();
         for column in row.columns() {
             insert_query.push_str(&column.name());
@@ -131,28 +150,27 @@ pub(crate) async fn mysql_to_sqlite(mysql_rows: Vec<MySqlRow>){
         insert_query.push_str(") ");
         values.push_str(")");
         insert_query.push_str(values.as_str());
-        let mut bind_values = Vec::new();
+
+        // generate the list of values to insert
         for column in row.columns() {
             let column_name = column.name();
             let column_type = column.type_info().name();
             match column_type {
                 "INT" => {
                     let value: i32 = row.get(column_name);
-                    bind_values.push(value.to_string());
                 }
                 "VARCHAR" => {
                     let value: String = row.get(column_name);
-                    bind_values.push(value);
                 }
                 &_ => {
                     let value: String = row.get(column_name);
-                    bind_values.push(value);
                 }
             }
         }
     }
-}
 
+    return insert_query;
+}
 
 fn mysql_type_to_sqlite_type(mysql_type: &str) -> String 
 {

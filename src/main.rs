@@ -32,11 +32,10 @@ fn main() {
     println!(" returned # of sqlite rows: {:?}",sqlite_row.len());
 
 
-
     // select data we just created 
     let query = "select * from test_table";
     let mysql_rows = block_on(data::query_mysql(query));
-    block_on(data::mysql_to_sqlite(mysql_rows));
+    block_on(data::mysql_to_sqlite(&mysql_rows));
 
 }
 
