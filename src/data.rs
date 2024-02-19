@@ -159,6 +159,19 @@ pub(crate) async fn mysql_to_sqlite(mysql_rows: Vec<MySqlRow>){
     insert_query.pop();
     insert_query.push_str(")");
     println!("insert_query:{}",insert_query);
+
+    let sqlite_pool = get_sqlite_connection().await;
+    let result = sqlx::query(insert_query.as_str())
+        .execute(&sqlite_pool)
+        .await;
+    match result {
+        Ok(_) => {
+            println!("created new table in sqlite");
+        }
+        Err(error) => {
+            panic!("error: {:?}", error);
+        }
+    }
 }
 
 
