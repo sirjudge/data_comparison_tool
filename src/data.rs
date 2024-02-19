@@ -1,6 +1,7 @@
 use std::borrow::Borrow;
-use sqlx::{ migrate::MigrateDatabase,mysql::{MySqlPoolOptions, MySqlRow}, sqlite::{SqlitePoolOptions, SqliteRow}, MySql, Pool};
+use sqlx::{ migrate::MigrateDatabase, mysql::{MySqlPoolOptions, MySqlRow}, sqlite::{SqlitePoolOptions, SqliteRow}, Column, MySql, Pool, Row, TypeInfo};
 use rand::{ Rng, thread_rng};
+use sqlx::mysql::MySqlTypeInfo;
 
 async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
     let db_url = "sqlite://./db.sqlite3";
@@ -141,4 +142,38 @@ fn random_string(len: usize) -> String {
         result.push(characters[index]);
     }
     return result;
+}
+
+pub(crate) async fn mysql_to_sqlite(mysql_rows: Vec<MySqlRow>){
+    let columns = mysql_rows[0].columns();
+    let mut insert_query = "create table if not exists test_table (".to_string();
+    for column in columns {
+        insert_query.push_str(&column.name());
+        insert_query.push_str(" ");
+        let mysql_column_type = column.type_info().name();
+        let sqlite_type = mysql_type_to_sqlite_type(mysql_column_type);
+        println!("mysql_column_type:{} sqlite_type:{}",mysql_column_type,sqlite_type);
+        insert_query.push_str(&sqlite_type);
+        insert_query.push_str(",");
+    }
+    insert_query.pop();
+    insert_query.push_str(")");
+    println!("insert_query:{}",insert_query);
+}
+
+
+fn mysql_type_to_sqlite_type(mysql_type: &str) -> String 
+{
+    match mysql_type {
+        "INT" => {
+            return "INTEGER".to_string();
+        }
+        "VARCHAR" => {
+            return "TEXT".to_string();
+        }
+        &_ => {
+            return "TEXT".to_string();
+        }
+    }
+
 }

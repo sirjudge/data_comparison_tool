@@ -10,14 +10,16 @@ fn main() {
     let sqlite_row = block_on(data::query_sqlite(query));
     println!(" returned # of sqlite rows: {:?}",sqlite_row.len());
 
-    // test my_sql connection
-    let query = "select 1 as number";
-    let mysql_rows = block_on(data::query_mysql(query));
-    println!(" returned # of mysql rows: {:?}",mysql_rows.len());
 
     // create new amount of random data
     block_on(data::create_new_data(100));
     println!("created 100 rows in mysql");
+
+    // select data we just created 
+    let query = "select * from test_table";
+    let mysql_rows = block_on(data::query_mysql(query));
+    block_on(data::mysql_to_sqlite(mysql_rows));
+
 }
 
 fn parse_arguments(){
