@@ -158,7 +158,7 @@ pub(crate) async fn mysql_to_sqlite(mysql_rows: Vec<MySqlRow>){
     }
     insert_query.pop();
     insert_query.push_str(")");
-    println!("insert_query:{}",insert_query);
+    println!("create table query:{}",insert_query);
 
     let sqlite_pool = get_sqlite_connection().await;
     let result = sqlx::query(insert_query.as_str())
@@ -170,6 +170,40 @@ pub(crate) async fn mysql_to_sqlite(mysql_rows: Vec<MySqlRow>){
         }
         Err(error) => {
             panic!("error: {:?}", error);
+        }
+    }
+
+    for row in mysql_rows {
+        let mut insert_query = "insert into test_table (".to_string();
+        let mut values = "values (".to_string();
+        for column in columns {
+            insert_query.push_str(&column.name());
+            insert_query.push_str(",");
+            values.push_str("?,");
+        }
+        insert_query.pop();
+        values.pop();
+        insert_query.push_str(") ");
+        values.push_str(")");
+        insert_query.push_str(values.as_str());
+        let mut bind_values = Vec::new();
+       
+        for column in columns {
+            let value = row.get::<&str, String>(column.name());
+            bind_values.push(value);
+        }
+        
+        let result = sqlx::query(insert_query.as_str())
+            .bind(bind_values)
+            .execute(&sqlite_pool)
+            .await;
+        match result {
+            Ok(_) => {
+                println!("inserted data into sqlite");
+            }
+            Err(error) => {
+                panic!("error: {:?}", error);
+            }
         }
     }
 }
