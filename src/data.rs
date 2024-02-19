@@ -1,7 +1,5 @@
 use std::borrow::Borrow;
 use sqlx::{ migrate::MigrateDatabase, mysql::{MySqlPoolOptions, MySqlRow}, sqlite::{SqlitePoolOptions, SqliteRow}, Column, MySql, Pool, Row, TypeInfo};
-use rand::{ Rng, thread_rng};
-use sqlx::mysql::MySqlTypeInfo;
 
 async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
     let db_url = "sqlite://./db.sqlite3";
@@ -47,7 +45,7 @@ pub(crate) async fn query_sqlite(query_string: &str) -> Vec<SqliteRow> {
 }
 
 
-async fn get_mysql_connection(database_name: &str) -> Pool<MySql>{
+pub(crate) async fn get_mysql_connection(database_name: &str) -> Pool<MySql>{
     let db_url = format!("mysql://root:@0.0.0.0:3306/{}", database_name);
     let result = MySqlPoolOptions::new()
         .acquire_timeout(std::time::Duration::from_secs(5))
@@ -82,72 +80,13 @@ pub(crate) async fn query_mysql(query_string: &str) -> Vec<MySqlRow> {
     }
 }
 
-pub(crate) async fn create_new_data(i: i32){
-    let pool = get_mysql_connection("test").await;
-    const CREATE_NEW_TABLE_QUERY: &str =
-        "CREATE TABLE IF NOT EXISTS test_table 
-        (
-            id INT NOT NULL AUTO_INCREMENT,
-            randomNumber INT NOT NULL,
-            secondRandomNumber INT NOT NULL,
-            randomString VARCHAR(255) NOT NULL,
-            secondRandomString VARCHAR(255) NOT NULL, 
-            PRIMARY KEY (id)
-         )";
-    let result = sqlx::query(CREATE_NEW_TABLE_QUERY)
-        .execute(&pool)
-        .await;
-    match result {
-        Ok(_) => {
-            println!("created new table in mysql");
-        }
-        Err(error) => {
-            panic!("error: {:?}", error);
-        }
-    }
-    
-    for _i in 0..i {
-        let insert_query = "INSERT INTO test_table (randomNumber,secondRandomNumber,randomString,secondRandomString) 
-            VALUES (?,?,?,?)";
-        let result = sqlx::query(insert_query)
-            .bind(random_long(100))
-            .bind(random_long(100))
-            .bind(random_string(50))
-            .bind(random_string(50))
-            .execute(&pool)
-            .await;
-        match result {
-            Ok(_) => {
-                println!("inserted data into mysql");
-            }
-            Err(error) => {
-                panic!("error: {:?}", error);
-            }
-        }
-    }
-}
-
-fn random_long(max: i32) -> i32 {
-    let mut rng = rand::thread_rng();
-    let n: i32 = rng.gen_range(1..max);
-    return n;
-}
-
-fn random_string(len: usize) -> String {
-    let mut rng = thread_rng();
-    let characters: Vec<char> = "abcdefghijklmnopqrstuvwxyz".chars().collect();
-    let mut result = String::new();
-    for _ in 0..len {
-        let index = rng.gen_range(0..characters.len());
-        result.push(characters[index]);
-    }
-    return result;
-}
 
 pub(crate) async fn mysql_to_sqlite(mysql_rows: Vec<MySqlRow>){
-    let columns = mysql_rows[0].columns();
+    // init insert query string
     let mut insert_query = "create table if not exists test_table (".to_string();
-    for column in columns {
+   
+    // for each column in the first mysql row generate the column name and type
+    for column in mysql_rows[0].columns() {
         insert_query.push_str(&column.name());
         insert_query.push_str(" ");
         let mysql_column_type = column.type_info().name();
@@ -156,10 +95,13 @@ pub(crate) async fn mysql_to_sqlite(mysql_rows: Vec<MySqlRow>){
         insert_query.push_str(&sqlite_type);
         insert_query.push_str(",");
     }
+
+    // pop the last char off the string (,) and insert closing parens
     insert_query.pop();
     insert_query.push_str(")");
-    println!("create table query:{}",insert_query);
+    println!("insert_query:{}",insert_query);
 
+    // open a new sqlite connection and execute the create statment
     let sqlite_pool = get_sqlite_connection().await;
     let result = sqlx::query(insert_query.as_str())
         .execute(&sqlite_pool)
@@ -169,14 +111,17 @@ pub(crate) async fn mysql_to_sqlite(mysql_rows: Vec<MySqlRow>){
             println!("created new table in sqlite");
         }
         Err(error) => {
-            panic!("error: {:?}", error);
+            panic!("error occurred while generating the new sqlite table: {:?}", error);
         }
     }
 
+
+    // for each row in mysql generate the insert statement
+    // TODO: wrap this in a transaction later
     for row in mysql_rows {
         let mut insert_query = "insert into test_table (".to_string();
         let mut values = "values (".to_string();
-        for column in columns {
+        for column in row.columns() {
             insert_query.push_str(&column.name());
             insert_query.push_str(",");
             values.push_str("?,");
@@ -187,22 +132,22 @@ pub(crate) async fn mysql_to_sqlite(mysql_rows: Vec<MySqlRow>){
         values.push_str(")");
         insert_query.push_str(values.as_str());
         let mut bind_values = Vec::new();
-       
-        for column in columns {
-            let value = row.get::<&str, String>(column.name());
-            bind_values.push(value);
-        }
-        
-        let result = sqlx::query(insert_query.as_str())
-            .bind(bind_values)
-            .execute(&sqlite_pool)
-            .await;
-        match result {
-            Ok(_) => {
-                println!("inserted data into sqlite");
-            }
-            Err(error) => {
-                panic!("error: {:?}", error);
+        for column in row.columns() {
+            let column_name = column.name();
+            let column_type = column.type_info().name();
+            match column_type {
+                "INT" => {
+                    let value: i32 = row.get(column_name);
+                    bind_values.push(value.to_string());
+                }
+                "VARCHAR" => {
+                    let value: String = row.get(column_name);
+                    bind_values.push(value);
+                }
+                &_ => {
+                    let value: String = row.get(column_name);
+                    bind_values.push(value);
+                }
             }
         }
     }
