@@ -26,13 +26,8 @@ fn main() {
         println!("created 100 rows in mysql");
     }
 
-    // test sqlite connection
-    let query = "select 1 as number";
-    let sqlite_row = block_on(data::query_sqlite(query));
-    println!(" returned # of sqlite rows: {:?}",sqlite_row.len());
-
-
     // select data we just created 
+    // TODO: pass in query parameter from command line args
     let query = "select * from test_table";
     let mysql_rows = block_on(data::query_mysql(query));
     block_on(data::mysql_to_sqlite(&mysql_rows));
