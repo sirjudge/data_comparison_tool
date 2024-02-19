@@ -5,15 +5,18 @@ mod data;
 fn main() {
     parse_arguments();
 
+    // test sqlite connection
     let query = "select 1 as number";
     let sqlite_row = block_on(data::query_sqlite(query));
     println!(" returned # of sqlite rows: {:?}",sqlite_row.len());
 
+    // test my_sql connection
     let query = "select 1 as number";
     let mysql_rows = block_on(data::query_mysql(query));
     println!(" returned # of mysql rows: {:?}",mysql_rows.len());
 
-    block_on(data::create_mysql_data(100));
+    // create new amount of random data
+    block_on(data::create_new_data(100));
     println!("created 100 rows in mysql");
 }
 

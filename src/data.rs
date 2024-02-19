@@ -1,7 +1,6 @@
 use std::borrow::Borrow;
-
-use sqlx::{ migrate::MigrateDatabase, mysql::{MySqlPoolOptions, MySqlRow}, sqlite::{SqlitePoolOptions, SqliteRow}, MySql, Pool, Row};
-
+use sqlx::{ migrate::MigrateDatabase,mysql::{MySqlPoolOptions, MySqlRow}, sqlite::{SqlitePoolOptions, SqliteRow}, MySql, Pool};
+use rand::{ Rng, thread_rng};
 
 async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
     let db_url = "sqlite://./db.sqlite3";
@@ -82,14 +81,18 @@ pub(crate) async fn query_mysql(query_string: &str) -> Vec<MySqlRow> {
     }
 }
 
-
-pub(crate) async fn create_mysql_data(i: i32){
-
+pub(crate) async fn create_new_data(i: i32){
     let pool = get_mysql_connection("test").await;
-    
-
     const CREATE_NEW_TABLE_QUERY: &str =
-        "CREATE TABLE IF NOT EXISTS test_table (id INT NOT NULL AUTO_INCREMENT, number INT NOT NULL, PRIMARY KEY (id))";
+        "CREATE TABLE IF NOT EXISTS test_table 
+        (
+            id INT NOT NULL AUTO_INCREMENT,
+            randomNumber INT NOT NULL,
+            secondRandomNumber INT NOT NULL,
+            randomString VARCHAR(255) NOT NULL,
+            secondRandomString VARCHAR(255) NOT NULL, 
+            PRIMARY KEY (id)
+         )";
     let result = sqlx::query(CREATE_NEW_TABLE_QUERY)
         .execute(&pool)
         .await;
@@ -102,9 +105,14 @@ pub(crate) async fn create_mysql_data(i: i32){
         }
     }
     
-    for i in 0..i {
-        let result = sqlx::query("INSERT INTO test_table (number) VALUES (?)")
-            .bind(i)
+    for _i in 0..i {
+        let insert_query = "INSERT INTO test_table (randomNumber,secondRandomNumber,randomString,secondRandomString) 
+            VALUES (?,?,?,?)";
+        let result = sqlx::query(insert_query)
+            .bind(RandomLong(100))
+            .bind(RandomLong(100))
+            .bind(RandomString(50))
+            .bind(RandomString(50))
             .execute(&pool)
             .await;
         match result {
@@ -116,4 +124,21 @@ pub(crate) async fn create_mysql_data(i: i32){
             }
         }
     }
+}
+
+fn RandomLong(max: i32) -> i32 {
+    let mut rng = rand::thread_rng();
+    let n: i32 = rng.gen_range(1..max);
+    return n;
+}
+
+fn RandomString(len: usize) -> String {
+    let mut rng = thread_rng();
+    let characters: Vec<char> = "abcdefghijklmnopqrstuvwxyz".chars().collect();
+    let mut result = String::new();
+    for _ in 0..len {
+        let index = rng.gen_range(0..characters.len());
+        result.push(characters[index]);
+    }
+    return result;
 }
