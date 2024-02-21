@@ -1,7 +1,7 @@
 use async_std::task::block_on;
 
 mod data;
-mod data_unit_test;
+mod data_creator;
 mod argument_parser;
 
 
@@ -22,7 +22,7 @@ fn main() {
 
     // create new amount of random data
     if args.generate_data {
-        block_on(data_unit_test::create_new_data(1000));
+        block_on(data_creator::create_new_data(1000));
         println!("created 100 rows in mysql");
     }
 
