@@ -63,3 +63,18 @@ fn random_string(len: usize) -> String {
     return result;
 }
 
+pub(crate) async fn clear_sqlite_data(){
+    let pool = get_mysql_connection("test").await;
+    let result = sqlx::query("DROP TABLE IF EXISTS test_table")
+        .execute(&pool)
+        .await;
+    match result {
+        Ok(_) => {
+            println!("dropped test_table");
+        }
+        Err(error) => {
+            panic!("error: {:?}", error);
+        }
+    }
+}
+
