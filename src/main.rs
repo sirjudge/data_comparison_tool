@@ -1,6 +1,6 @@
 use async_std::task::block_on;
 
-mod data_injector;
+mod data_querier;
 mod data_creator;
 mod argument_parser;
 mod data_comparer;
@@ -33,8 +33,17 @@ fn main() {
     // select data we just created 
     let query_1 = format!("select * from {}", args.table_name_1);
     let query_2 = format!("select * from {}", args.table_name_2);
-    let mysql_rows_1= block_on(data_injector::query_mysql(&query_1));
-    let mysql_rows_2 = block_on(data_injector::query_mysql(&query_2));
-    block_on(data_injector::mysql_to_sqlite(&mysql_rows_1, &args.table_name_1));
-    block_on(data_injector::mysql_to_sqlite(&mysql_rows_2, &args.table_name_2));
+    let mysql_rows_1= block_on(data_querier::query_mysql(&query_1));
+    let mysql_rows_2 = block_on(data_querier::query_mysql(&query_2));
+    block_on(data_querier::mysql_to_sqlite(&mysql_rows_1, &args.table_name_1));
+    block_on(data_querier::mysql_to_sqlite(&mysql_rows_2, &args.table_name_2));
+
+    // compare the data
+    let result = block_on(data_comparer::compare_sqlite_tables(&args.table_name_1, &args.table_name_2));
+    if result {
+        println!("tables are the same");
+    }
+    else {
+        println!("tables are different");
+    }
 }

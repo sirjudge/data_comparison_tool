@@ -1,7 +1,7 @@
 use std::i16;
 use async_std::task::block_on;
 use rand::{ thread_rng, Rng};
-use crate::data_injector::get_mysql_connection;
+use crate::data_querier::get_mysql_connection;
 
 pub(crate) async fn generate_mysql_test_data(num_rows_to_generate: i16, table_name_1: &str, table_name_2: &str) {
     block_on(create_new_data(num_rows_to_generate, table_name_1));
