@@ -3,6 +3,7 @@ use async_std::task::block_on;
 mod data_injector;
 mod data_creator;
 mod argument_parser;
+mod data_comparer;
 
 fn main() {
     let args = argument_parser::parse_arguments();
