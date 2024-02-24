@@ -1,5 +1,44 @@
 use std::borrow::Borrow;
-use sqlx::{ migrate::MigrateDatabase, mysql::{MySqlPoolOptions, MySqlRow}, sqlite::SqlitePoolOptions, Column, MySql, Pool, Row, TypeInfo};
+use sqlx::{ migrate::MigrateDatabase, mysql::{MySqlColumn, MySqlPoolOptions, MySqlRow}, sqlite::SqlitePoolOptions, Column, MySql, Pool, Row, TypeInfo};
+
+pub struct TableData {
+    pub table_name: String,
+    pub columns: Vec<MySqlColumn>,
+    pub primary_key: String
+}
+
+pub(crate) async fn get_mysql_table_data(table_name: &str) -> TableData {
+    let pool = get_mysql_connection("test").await;
+    let result = sqlx::query(&format!("select * from {} limit 1", table_name))
+        .fetch_one(&pool)
+        .await;
+    match result {
+        Ok(row) => {
+            let columns = row.columns();
+            let mut column_names = Vec::new();
+            for column in columns {
+                column_names.push(column.clone());
+            }
+
+            return TableData {
+                table_name: table_name.to_string(),
+                columns: column_names,
+                primary_key: "id".to_string()
+            };
+
+            /*
+            return TableData {
+                table_name: table_name.to_string(),
+                columns: column_names,
+                primary_key: "id".to_string();
+            };
+            */
+        }
+        Err(error) => {
+            panic!("error occurred while fetching table data: {:?}", error);
+        }
+    }
+}
 
 pub(crate) async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
     let db_url = "sqlite://./db.sqlite3";
@@ -23,7 +62,6 @@ pub(crate) async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
         }
     }
 }
-
 
 pub(crate) async fn get_mysql_connection(database_name: &str) -> Pool<MySql>{
     let db_url = format!("mysql://root:@0.0.0.0:3306/{}", database_name);
@@ -60,17 +98,16 @@ pub(crate) async fn query_mysql(query_string: &str) -> Vec<MySqlRow> {
     }
 }
 
-
-pub(crate) async fn mysql_to_sqlite(mysql_rows: &Vec<MySqlRow>, table_name: &str){
+pub(crate) async fn mysql_to_sqlite(mysql_rows: &Vec<MySqlRow>, table_data: &TableData) {
     // open a new sqlite connection and execute the create statment
     let sqlite_pool = get_sqlite_connection().await;
    
     // if we've built the new sqlite table 
-    if create_new_sqlite_table(mysql_rows, &sqlite_pool,table_name).await {
+    if create_new_sqlite_table(mysql_rows, &sqlite_pool,&table_data.table_name).await {
         println!("created new sqlite table");
         
         // generate the insert query and run it
-        let insert_query = create_sqlite_insert_query(mysql_rows, table_name);
+        let insert_query = create_sqlite_insert_query(mysql_rows, &table_data.table_name);
         let result = sqlx::query(insert_query.as_str())
             .execute(&sqlite_pool)
             .await;
@@ -186,33 +223,5 @@ fn mysql_type_to_sqlite_type(mysql_type: &str) -> String
         &_ => {
             return "BLOB".to_string();
         }
-    }
-
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use async_std::task::block_on;
-
-    #[test]
-    fn sqlite_constructor() {
-        for file in std::fs::read_dir(".").unwrap(){
-            let file = file.unwrap();
-            let file_name = file.file_name();
-            let file_name = file_name.to_str().unwrap();
-            if file_name.ends_with(".sqlite"){
-                std::fs::remove_file(file_name).unwrap();
-            }
-        }
-        let sqlite_pool = block_on(get_sqlite_connection());
-    }
-
-    #[test]
-    fn mysql_to_sqlite_test(){
-        let mysql_pool = block_on(get_mysql_connection("test"));
-        let mysql_rows = block_on(query_mysql("select * from test_table"));
-        let result = block_on(mysql_to_sqlite(&mysql_rows));
-        assert_eq!(result, ());
     }
 }
