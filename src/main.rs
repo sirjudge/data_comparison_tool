@@ -44,7 +44,6 @@ fn main() {
     block_on(data_querier::mysql_to_sqlite(&mysql_rows_1, &table_1_data));
     block_on(data_querier::mysql_to_sqlite(&mysql_rows_2, &table_2_data));
 
-
     // compare the data
     let result = block_on(data_comparer::compare_sqlite_tables(&table_1_data,&table_2_data));
     if result {
