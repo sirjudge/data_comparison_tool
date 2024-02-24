@@ -3,7 +3,24 @@ pub struct Arguments {
     pub generate_data: bool,
     pub verbose: bool,
     pub version: bool,
-    pub help: bool
+    pub help: bool,
+    pub clean: bool,
+    pub number_of_rows_to_generate: i16,
+    pub table_name_1: String,
+    pub table_name_2: String
+}
+
+pub(crate) fn print_help(){
+    println!("Help requested! This is a tool to help compare large data sets between mysql and sqlite"); 
+    println!("Usage: ");
+    println!("\t-q=<query> : specify a mysql query to run");
+    println!("\t-gen : generate new data in mysql");
+    println!("\t-v : verbose output");
+    println!("\t-h : print this help message");
+    println!("\t-d : clean sqlite database");
+    println!("\t--version : print version information");
+    println!("\t-t1=<table_name> : specify the name of the first table to compare");
+    println!("\t-t2=<table_name> : specify the name of the second table to compare");
 }
 
 pub(crate) fn parse_arguments() -> Arguments{
@@ -13,7 +30,11 @@ pub(crate) fn parse_arguments() -> Arguments{
         generate_data: false,
         verbose: false,
         version: false,
-        help: false
+        help: false,
+        clean: true,
+        number_of_rows_to_generate: 0,
+        table_name_1: "test_table_1".to_string(),
+        table_name_2: "test_table_2".to_string()
     };
    
     // loop over each argument
@@ -30,6 +51,17 @@ pub(crate) fn parse_arguments() -> Arguments{
                 "-q" => {
                     return_arguments.mysql_query = value.unwrap().to_string();
                 }
+                "-gen" => {
+                    return_arguments.generate_data = true;
+                    let number_of_rows = value.unwrap().parse::<i16>().unwrap();
+                    return_arguments.number_of_rows_to_generate = number_of_rows;
+                }
+                "-t1" => {
+                    return_arguments.table_name_1 = value.unwrap().to_string();
+                }
+                "-t2" => {
+                    return_arguments.table_name_2 = value.unwrap().to_string();
+                }
                 &_ => {
                     println!("Unknown argument:{}",arg);
                 }
@@ -37,6 +69,9 @@ pub(crate) fn parse_arguments() -> Arguments{
         }
         else {
             match arg.as_str() {
+                "-d" => {
+                    return_arguments.clean = true;
+                }
                 "-h" => {
                     return_arguments.help = true;
                 }

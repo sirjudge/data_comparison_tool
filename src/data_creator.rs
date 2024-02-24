@@ -1,10 +1,17 @@
-use rand::{ Rng, thread_rng};
-use crate::data::get_mysql_connection;
+use std::i16;
+use async_std::task::block_on;
+use rand::{ thread_rng, Rng};
+use crate::data_injector::get_mysql_connection;
 
-pub(crate) async fn create_new_data(i: i32){
+pub(crate) async fn generate_mysql_test_data(num_rows_to_generate: i16, table_name_1: &str, table_name_2: &str) {
+    block_on(create_new_data(num_rows_to_generate, table_name_1));
+    block_on(create_new_data(num_rows_to_generate, table_name_2));
+}
+
+pub(crate) async fn create_new_data(num_rows_to_generate: i16, table_name: &str){
     let pool = get_mysql_connection("test").await;
-    const CREATE_NEW_TABLE_QUERY: &str =
-        "CREATE TABLE IF NOT EXISTS test_table 
+    let create_new_table_query = format!(
+        "CREATE TABLE IF NOT EXISTS {} 
         (
             id INT NOT NULL AUTO_INCREMENT,
             randomNumber INT NOT NULL,
@@ -12,23 +19,23 @@ pub(crate) async fn create_new_data(i: i32){
             randomString VARCHAR(255) NOT NULL,
             secondRandomString VARCHAR(255) NOT NULL, 
             PRIMARY KEY (id)
-         )";
-    let result = sqlx::query(CREATE_NEW_TABLE_QUERY)
+         )", table_name);
+    let result = sqlx::query(&create_new_table_query)
         .execute(&pool)
         .await;
     match result {
         Ok(_) => {
-            println!("created new table in mysql");
+            println!("created new mysql table: {}", table_name);
         }
         Err(error) => {
             panic!("error: {:?}", error);
         }
     }
     
-    for _i in 0..i {
-        let insert_query = "INSERT INTO test_table (randomNumber,secondRandomNumber,randomString,secondRandomString) 
-            VALUES (?,?,?,?)";
-        let result = sqlx::query(insert_query)
+    for _i in 0..num_rows_to_generate {
+        let insert_query = format!("INSERT INTO {}(randomNumber,secondRandomNumber,randomString,secondRandomString) 
+            VALUES (?,?,?,?)", table_name);
+        let result = sqlx::query(&insert_query)
             .bind(random_long(100))
             .bind(random_long(100))
             .bind(random_string(50))
@@ -36,9 +43,7 @@ pub(crate) async fn create_new_data(i: i32){
             .execute(&pool)
             .await;
         match result {
-            Ok(_) => {
-                println!("inserted data into mysql");
-            }
+            Ok(_) => { }
             Err(error) => {
                 panic!("error: {:?}", error);
             }
@@ -47,8 +52,7 @@ pub(crate) async fn create_new_data(i: i32){
 }
 
 fn random_long(max: i32) -> i32 {
-    let mut rng = rand::thread_rng();
-    let n: i32 = rng.gen_range(1..max);
+    let n: i32 = thread_rng().gen_range(1..max);
     return n;
 }
 
@@ -64,16 +68,14 @@ fn random_string(len: usize) -> String {
 }
 
 pub(crate) async fn clear_sqlite_data(){
-    let pool = get_mysql_connection("test").await;
-    let result = sqlx::query("DROP TABLE IF EXISTS test_table")
-        .execute(&pool)
-        .await;
-    match result {
-        Ok(_) => {
-            println!("dropped test_table");
-        }
-        Err(error) => {
-            panic!("error: {:?}", error);
+    // get all files in the current directory
+    let files = std::fs::read_dir(".").unwrap();
+    for file in files{
+        let file = file.unwrap();
+        let file_name = file.file_name();
+        let file_name = file_name.to_str().unwrap();
+        if file_name.ends_with(".sqlite"){
+            std::fs::remove_file(file_name).unwrap();
         }
     }
 }

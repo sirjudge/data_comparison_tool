@@ -59,7 +59,6 @@ pub(crate) async fn query_mysql(query_string: &str) -> Vec<MySqlRow> {
 
 
 pub(crate) async fn mysql_to_sqlite(mysql_rows: &Vec<MySqlRow>){
-
     // open a new sqlite connection and execute the create statment
     let sqlite_pool = get_sqlite_connection().await;
    
@@ -73,9 +72,7 @@ pub(crate) async fn mysql_to_sqlite(mysql_rows: &Vec<MySqlRow>){
             .execute(&sqlite_pool)
             .await;
         match result {
-            Ok(_) => {
-                println!("inserted rows into sqlite table");
-            }
+            Ok(_) => {}
             Err(error) => {
                 panic!("error occurred while inserting rows into sqlite table: {:?}", error);
             }
@@ -90,6 +87,7 @@ pub(crate) async fn mysql_to_sqlite(mysql_rows: &Vec<MySqlRow>){
 
 // generates a new sqlite table from a passed in mysql row
 async fn create_new_sqlite_table(mysql_rows: &Vec<MySqlRow>, sqlite_pool: &Pool<sqlx::Sqlite>) -> bool {
+    // extract table information
     // init insert query string
     let mut create_query  = "create table if not exists test_table (".to_string();
    
@@ -132,7 +130,6 @@ fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>) -> String {
     }
     insert_query.pop();
     insert_query.push_str(") VALUES ");
-    println!("insert query columns: {}", insert_query);
    
 
     // foreach row in the mysql result set generate the insert query
@@ -185,8 +182,35 @@ fn mysql_type_to_sqlite_type(mysql_type: &str) -> String
             return "TEXT".to_string();
         }
         &_ => {
-            return "TEXT".to_string();
+            return "BLOB".to_string();
         }
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use async_std::task::block_on;
+
+    #[test]
+    fn sqlite_constructor() {
+        for file in std::fs::read_dir(".").unwrap(){
+            let file = file.unwrap();
+            let file_name = file.file_name();
+            let file_name = file_name.to_str().unwrap();
+            if file_name.ends_with(".sqlite"){
+                std::fs::remove_file(file_name).unwrap();
+            }
+        }
+        let sqlite_pool = block_on(get_sqlite_connection());
+    }
+
+    #[test]
+    fn mysql_to_sqlite_test(){
+        let mysql_pool = block_on(get_mysql_connection("test"));
+        let mysql_rows = block_on(query_mysql("select * from test_table"));
+        let result = block_on(mysql_to_sqlite(&mysql_rows));
+        assert_eq!(result, ());
+    }
 }
