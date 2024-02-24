@@ -4,11 +4,13 @@ use sqlx::{ migrate::MigrateDatabase, mysql::{MySqlPoolOptions, MySqlRow}, sqlit
 async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
     let db_url = "sqlite://./db.sqlite3";
 
+    // check if sqlite database exists and create it if it doesn't
     if !sqlx::Sqlite::database_exists(db_url).await.unwrap(){
-        println!("creating sqlite db");
         sqlx::Sqlite::create_database(db_url).await.unwrap(); 
+        println!("database did not previously exist, created sqlite db");
     }
 
+    // connect to the sqlite database and return the pool
     let result = SqlitePoolOptions::new()
         .acquire_timeout(std::time::Duration::from_secs(30))
         .connect(db_url).await;
@@ -21,6 +23,7 @@ async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
         }
     }
 }
+
 
 pub(crate) async fn get_mysql_connection(database_name: &str) -> Pool<MySql>{
     let db_url = format!("mysql://root:@0.0.0.0:3306/{}", database_name);
@@ -58,19 +61,20 @@ pub(crate) async fn query_mysql(query_string: &str) -> Vec<MySqlRow> {
 }
 
 
-pub(crate) async fn mysql_to_sqlite(mysql_rows: &Vec<MySqlRow>){
+pub(crate) async fn mysql_to_sqlite(mysql_rows: &Vec<MySqlRow>, table_name: &str){
     // open a new sqlite connection and execute the create statment
     let sqlite_pool = get_sqlite_connection().await;
    
     // if we've built the new sqlite table 
-    if create_new_sqlite_table(mysql_rows, &sqlite_pool).await {
+    if create_new_sqlite_table(mysql_rows, &sqlite_pool,table_name).await {
         println!("created new sqlite table");
         
         // generate the insert query and run it
-        let insert_query = create_sqlite_insert_query(mysql_rows);
+        let insert_query = create_sqlite_insert_query(mysql_rows, table_name);
         let result = sqlx::query(insert_query.as_str())
             .execute(&sqlite_pool)
             .await;
+
         match result {
             Ok(_) => {}
             Err(error) => {
@@ -86,18 +90,16 @@ pub(crate) async fn mysql_to_sqlite(mysql_rows: &Vec<MySqlRow>){
 }
 
 // generates a new sqlite table from a passed in mysql row
-async fn create_new_sqlite_table(mysql_rows: &Vec<MySqlRow>, sqlite_pool: &Pool<sqlx::Sqlite>) -> bool {
+async fn create_new_sqlite_table(mysql_rows: &Vec<MySqlRow>, sqlite_pool: &Pool<sqlx::Sqlite>, table_name: &str) -> bool {
     // extract table information
     // init insert query string
-    let mut create_query  = "create table if not exists test_table (".to_string();
+    let mut create_query  = format!("create table if not exists {} (", table_name );
    
     // for each column in the first mysql row generate the column name and type
     for column in mysql_rows[0].columns(){
         create_query.push_str(&column.name());
         create_query.push_str(" ");
-        let mysql_column_type = column.type_info().name();
-        let sqlite_type = mysql_type_to_sqlite_type(mysql_column_type);
-        create_query.push_str(&sqlite_type);
+        create_query.push_str(&mysql_type_to_sqlite_type(column.type_info().name()));
         create_query.push_str(",");
     }
 
@@ -118,20 +120,20 @@ async fn create_new_sqlite_table(mysql_rows: &Vec<MySqlRow>, sqlite_pool: &Pool<
 }
 
 // generates a new sqlite insert query from a passed in mysql row
-fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>) -> String {
+fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> String {
 
     // for each row in mysql generate the insert statement
-    let mut insert_query = "insert into test_table (".to_string();
+    let mut insert_query = format!("insert into {} (" , table_name);
 
     // generate the column insert list
     for column in mysql_rows[0].columns() {
         insert_query.push_str(&column.name());
         insert_query.push_str(",");
     }
+
     insert_query.pop();
     insert_query.push_str(") VALUES ");
    
-
     // foreach row in the mysql result set generate the insert query
     for row in mysql_rows {
         let mut value_insert_string = "(".to_string();
