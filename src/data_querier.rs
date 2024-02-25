@@ -98,7 +98,7 @@ pub(crate) async fn query_mysql(query_string: &str) -> Vec<MySqlRow> {
     }
 }
 
-pub(crate) async fn mysql_to_sqlite(mysql_rows: &Vec<MySqlRow>, table_data: &TableData) {
+pub(crate) async fn mysql_table_to_sqlite_table(mysql_rows: &Vec<MySqlRow>, table_data: &TableData) {
     // open a new sqlite connection and execute the create statment
     let sqlite_pool = get_sqlite_connection().await;
    

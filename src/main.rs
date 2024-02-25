@@ -40,14 +40,19 @@ fn main() {
     let query_2 = format!("select * from {}", args.table_name_2);
     let mysql_rows_1= block_on(data_querier::query_mysql(&query_1));
     let mysql_rows_2 = block_on(data_querier::query_mysql(&query_2));
-    
-    block_on(data_querier::mysql_to_sqlite(&mysql_rows_1, &table_1_data));
-    block_on(data_querier::mysql_to_sqlite(&mysql_rows_2, &table_2_data));
+   
+    // migrate data from mysql to sqlite
+    block_on(data_querier::mysql_table_to_sqlite_table(&mysql_rows_1, &table_1_data));
+    block_on(data_querier::mysql_table_to_sqlite_table(&mysql_rows_2, &table_2_data));
 
     // compare the data
     let result = block_on(data_comparer::compare_sqlite_tables(&table_1_data,&table_2_data));
     if result {
-        println!("tables are the same");
+        // TODO: we can't call these print statements if the table types are used after.
+        // Not neccessarily an issue because we should just display the final results in the CLI
+        // anyways so this todo might be a non-issue. 
+        print_table_name(table_2_data);
+        print_table_name(table_1_data);
     }
     else {
         println!("tables are different");
