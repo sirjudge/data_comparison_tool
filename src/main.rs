@@ -30,19 +30,31 @@ fn main() {
     }
 
     // get the table data
+    if args.verbose {
+        println!("getting table data");
+    }
     let table_1_data = block_on(data_querier::get_mysql_table_data(&args.table_name_1));
     let table_2_data = block_on(data_querier::get_mysql_table_data(&args.table_name_2));
 
     // select data we just created 
+    if args.verbose {
+        println!("selecting data from mysql");
+    }
     let query_1 = format!("select * from {}", args.table_name_1);
     let query_2 = format!("select * from {}", args.table_name_2);
 
-    let database_name = "test";
 
+    if args.verbose {
+        println!("querying mysql");
+    }
+    let database_name = "test";
     let mysql_rows_1= block_on(data_querier::query_mysql(&query_1,database_name ));
     let mysql_rows_2 = block_on(data_querier::query_mysql(&query_2, database_name));
    
-    // migrate data from mysql to sqlite
+   
+    if args.verbose {
+        println!("converting mysql data to sqlite");
+    }
     block_on(data_querier::mysql_table_to_sqlite_table(&mysql_rows_1, &table_1_data));
     block_on(data_querier::mysql_table_to_sqlite_table(&mysql_rows_2, &table_2_data));
 
