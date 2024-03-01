@@ -40,10 +40,9 @@ pub(crate) fn parse_arguments() -> Arguments{
     // loop over each argument
     // first argument is the name of the program so we can ignore it
     for arg in std::env::args().skip(1){
-        println!("argument:{}",arg);
         // if arg contains '=' split the flag + value and print
         if arg.contains('='){
-            let mut split_string = arg.split("=");
+            let mut split_string = arg.split('=');
             let flag = split_string.next();
             let value = split_string.next();
             std::env::set_var(flag.unwrap(), value.unwrap());
@@ -67,6 +66,7 @@ pub(crate) fn parse_arguments() -> Arguments{
                 }
             }
         }
+        // if arg doesn't contain an = then we can just check the whole flag
         else {
             match arg.as_str() {
                 "-d" => {

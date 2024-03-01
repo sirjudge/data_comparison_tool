@@ -1,4 +1,6 @@
 use async_std::task::block_on;
+use data_querier::TableData;
+
 mod data_querier;
 mod data_creator;
 mod argument_parser;
@@ -45,7 +47,6 @@ fn main() {
 
     // compare the data
     let result = block_on(data_comparer::compare_sqlite_tables(&table_1_data,&table_2_data));
-    print_results(result);
 }
 
 fn print_results(result: data_comparer::ComparisonData){

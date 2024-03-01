@@ -7,14 +7,6 @@ pub struct TableData {
     pub primary_key: String
 }
 
-fn new () -> TableData {
-    TableData {
-        table_name: "".to_string(),
-        columns: Vec::new(),
-        primary_key: "".to_string()
-    }
-}
-
 pub(crate) async fn get_mysql_table_data(table_name: &str) -> TableData {
     let pool = get_mysql_connection("test").await;
     let result = sqlx::query(&format!("select * from {} limit 1", table_name))
@@ -27,20 +19,11 @@ pub(crate) async fn get_mysql_table_data(table_name: &str) -> TableData {
             for column in columns {
                 column_names.push(column.clone());
             }
-                
-            return TableData {
+            TableData {
                 table_name: table_name.to_string(),
                 columns: column_names,
                 primary_key: "id".to_string()
-            };
-
-            /*
-            return TableData {
-                table_name: table_name.to_string(),
-                columns: column_names,
-                primary_key: "id".to_string();
-            };
-            */
+            }
         }
         Err(error) => {
             panic!("error occurred while fetching table data: {:?}", error);

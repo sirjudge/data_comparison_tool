@@ -9,13 +9,27 @@ pub struct ComparisonData {
     pub table_2_data: TableData,
 }
 
-fn new (unique_table_1_data: Vec<sqlx::sqlite::SqliteRow>,
-        unique_table_2_data: Vec<sqlx::sqlite::SqliteRow>) -> ComparisonData {
+fn new (
+        unique_table_1_data: Vec<sqlx::sqlite::SqliteRow>,
+        unique_table_2_data: Vec<sqlx::sqlite::SqliteRow>
+        ) -> ComparisonData {
+   
+    let t1_data = TableData {
+            table_name: String::from(""),
+            primary_key: String::from(""),
+            columns: Vec::new(),
+        };
+    let t2_data =  TableData {
+            table_name: String::from(""),
+            primary_key: String::from(""),
+            columns: Vec::new(),
+    };
+
     ComparisonData {
         unique_table_1_rows: unique_table_1_data,
         unique_table_2_rows: unique_table_2_data,
-        table_1_data: new (),
-        table_2_data: new (),
+        table_1_data: t1_data,
+        table_2_data: t2_data
     }
 }
 
@@ -25,12 +39,7 @@ pub(crate) async fn compare_sqlite_tables(
     let sqlite_pool = data_querier::get_sqlite_connection().await;
     let sqlite_rows_1 = get_unique_rows(table_data_1, table_data_2, &sqlite_pool).await;
     let sqlite_rows_2 = get_unique_rows(table_data_2, table_data_1, &sqlite_pool).await;
-
-    println!("rows in table 1 that are not in table 2: {}", sqlite_rows_1.len());
-    println!("rows in table 2 that are not in table 1: {}", sqlite_rows_2.len());
-    
-    let comp_data = new(sqlite_rows_1, sqlite_rows_2, );
-    return comp_data;
+     new(sqlite_rows_1, sqlite_rows_2, )
 }
 
 async fn get_unique_rows(
@@ -54,7 +63,7 @@ async fn get_unique_rows(
     // if no errors return the rows otherwise return that there was an error
     match rows {
         Ok(rows) => {
-            return rows;
+            rows
         }
         Err(error) => {
             panic!("error: {:?}", error);
