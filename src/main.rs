@@ -36,8 +36,11 @@ fn main() {
     // select data we just created 
     let query_1 = format!("select * from {}", args.table_name_1);
     let query_2 = format!("select * from {}", args.table_name_2);
-    let mysql_rows_1= block_on(data_querier::query_mysql(&query_1));
-    let mysql_rows_2 = block_on(data_querier::query_mysql(&query_2));
+
+    let database_name = "test";
+
+    let mysql_rows_1= block_on(data_querier::query_mysql(&query_1,database_name ));
+    let mysql_rows_2 = block_on(data_querier::query_mysql(&query_2, database_name));
    
     // migrate data from mysql to sqlite
     block_on(data_querier::mysql_table_to_sqlite_table(&mysql_rows_1, &table_1_data));
@@ -51,4 +54,5 @@ fn main() {
 fn print_results(result: data_comparer::ComparisonData){
     println!("rows in table 1 that are not in table 2: {}", result.unique_table_1_rows.len());
     println!("rows in table 2 that are not in table 1: {}", result.unique_table_2_rows.len());
+    println!("rows that are different between the two tables: {}", result.changed_rows.len());
 }

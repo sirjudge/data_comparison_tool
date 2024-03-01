@@ -46,7 +46,7 @@ pub(crate) async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
         .connect(db_url).await;
     match result {
         Ok(pool) => {
-            return pool; 
+            pool 
         }
         Err(error) => {
             panic!("unable to connect to sqlite db {}", error);
@@ -61,7 +61,7 @@ pub(crate) async fn get_mysql_connection(database_name: &str) -> Pool<MySql>{
         .connect(db_url.borrow()).await;
     match result {
         Ok(pool) => {
-            return pool;
+            pool
         }
         Err(error) => {
             panic!("unable to connect to mysql db {}", error);
@@ -69,19 +69,20 @@ pub(crate) async fn get_mysql_connection(database_name: &str) -> Pool<MySql>{
     }
 }
 
-pub(crate) async fn query_mysql(query_string: &str) -> Vec<MySqlRow> {
-    let pool = get_mysql_connection("test").await;
+pub(crate) async fn query_mysql(query_string: &str, database: &str) -> Vec<MySqlRow> {
+    // open a connection to the test db and execute the query
+    let pool = get_mysql_connection(database).await;
     let rows = sqlx::query(query_string)
         .fetch_all(&pool)
         .await;
+    
+    // if no errors return and rows isn't empty then return those rows, otherwise panic
     match rows{
         Ok(rows) => {
             if rows.is_empty(){
                 panic!("no rows returned");
             }
-            else {
-                return rows;
-            }
+            rows
         }
         Err(error) => {
             panic!("error: {:?}", error);
@@ -199,20 +200,20 @@ fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> S
     }
     // remove trailing comma
     insert_query.pop();
-    return insert_query;
+    insert_query
 }
 
 fn mysql_type_to_sqlite_type(mysql_type: &str) -> String 
 {
     match mysql_type {
         "INT" => {
-            return "INTEGER".to_string();
+            "INTEGER".to_string()
         }
         "VARCHAR" => {
-            return "TEXT".to_string();
+            "TEXT".to_string()
         }
         &_ => {
-            return "BLOB".to_string();
+            "BLOB".to_string()
         }
     }
 }
