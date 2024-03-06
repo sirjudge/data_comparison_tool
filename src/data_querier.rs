@@ -1,5 +1,7 @@
 use std::borrow::Borrow;
 use sqlx::{ migrate::MigrateDatabase, mysql::{MySqlColumn, MySqlPoolOptions, MySqlRow}, sqlite::SqlitePoolOptions, Column, MySql, Pool, Row, TypeInfo};
+//TODO: add this back in when I add dateTime support
+//use chrono::{Local, DateTime};
 
 pub struct TableData {
     pub table_name: String,
@@ -96,7 +98,7 @@ pub(crate) async fn mysql_table_to_sqlite_table(mysql_rows: &Vec<MySqlRow>, tabl
    
     // if we've built the new sqlite table 
     if create_new_sqlite_table(mysql_rows, &sqlite_pool,&table_data.table_name).await {
-        println!("created new sqlite table");
+        println!("created new sqlite table: {}", &table_data.table_name);
         
         // generate the insert query and run it
         let insert_query = create_sqlite_insert_query(mysql_rows, &table_data.table_name);
@@ -114,8 +116,6 @@ pub(crate) async fn mysql_table_to_sqlite_table(mysql_rows: &Vec<MySqlRow>, tabl
     else {
         panic!("unable to create new sqlite table");
     } 
-
-    drop(sqlite_pool);
 }
 
 // generates a new sqlite table from a passed in mysql row
@@ -171,6 +171,8 @@ fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> S
         for column in row.columns() {
             let column_name = column.name();
             let column_type = column.type_info().name();
+            
+            // TODO: add support for datetime
             match column_type {
                 "INT" => {
                     let value: i32 = row.get(column_name);
@@ -205,6 +207,7 @@ fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> S
 
 fn mysql_type_to_sqlite_type(mysql_type: &str) -> String 
 {
+    //TODO: add support for datetime
     match mysql_type {
         "INT" => {
             "INTEGER".to_string()

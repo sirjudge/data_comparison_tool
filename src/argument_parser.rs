@@ -1,3 +1,5 @@
+use chrono::{Local};
+
 pub struct Arguments {
     pub mysql_query: String, 
     pub generate_data: bool,
@@ -5,26 +7,28 @@ pub struct Arguments {
     pub version: bool,
     pub help: bool,
     pub clean: bool,
-    pub number_of_rows_to_generate: i16,
+    pub number_of_rows_to_generate: i32,
     pub table_name_1: String,
     pub table_name_2: String
 }
 
 pub(crate) fn print_help(){
     println!("Help requested! This is a tool to help compare large data sets between mysql and sqlite"); 
-    println!("Usage: ");
+    println!("Usage: data_comparison");
+    println!("\t-h : print this help message");
     println!("\t-q=<query> : specify a mysql query to run");
     println!("\t-gen : generate new data in mysql");
-    println!("\t-v : verbose output");
-    println!("\t-h : print this help message");
-    println!("\t-d : clean sqlite database");
-    println!("\t--version : print version information");
+    println!("\t-verbose : verbose output");
+    println!("\t-version : print version information");
+    println!("\t-c : clean sqlite database");
     println!("\t-t1=<table_name> : specify the name of the first table to compare");
     println!("\t-t2=<table_name> : specify the name of the second table to compare");
 }
 
 pub(crate) fn parse_arguments() -> Arguments{
     // init argument struct
+    let current_date_stamp = Local::now().format("%Y%m%d%H%M%S").to_string();
+
     let mut return_arguments = Arguments{
         mysql_query: "select * from test_table".to_string(),
         generate_data: false,
@@ -33,8 +37,8 @@ pub(crate) fn parse_arguments() -> Arguments{
         help: false,
         clean: true,
         number_of_rows_to_generate: 0,
-        table_name_1: "test_table_1".to_string(),
-        table_name_2: "test_table_2".to_string()
+        table_name_1: format!("table_1{}", current_date_stamp),
+        table_name_2: format!("table_2{}", current_date_stamp)
     };
    
     // loop over each argument
@@ -49,17 +53,22 @@ pub(crate) fn parse_arguments() -> Arguments{
             match flag.unwrap() {
                 "-q" => {
                     return_arguments.mysql_query = value.unwrap().to_string();
+                    println!("query: {}", return_arguments.mysql_query);
                 }
                 "-gen" => {
                     return_arguments.generate_data = true;
-                    let number_of_rows = value.unwrap().parse::<i16>().unwrap();
+                    let number_of_rows = value.unwrap().parse::<i32>().unwrap();
                     return_arguments.number_of_rows_to_generate = number_of_rows;
                 }
                 "-t1" => {
-                    return_arguments.table_name_1 = value.unwrap().to_string();
+                    let table_name = value.unwrap();
+                    return_arguments.table_name_1 = format!("{}{}",table_name, current_date_stamp);
+                    println!("table name 1: {}", return_arguments.table_name_1);
                 }
                 "-t2" => {
-                    return_arguments.table_name_2 = value.unwrap().to_string();
+                    let table_name = value.unwrap();
+                    return_arguments.table_name_2 = format!("{}{}",table_name, current_date_stamp);
+                    println!("table name 2: {}", return_arguments.table_name_2);
                 }
                 &_ => {
                     println!("Unknown argument:{}",arg);
@@ -69,14 +78,22 @@ pub(crate) fn parse_arguments() -> Arguments{
         // if arg doesn't contain an = then we can just check the whole flag
         else {
             match arg.as_str() {
-                "-d" => {
+                "-c" => {
                     return_arguments.clean = true;
+                    println!("cleaning sqlite database files");
                 }
                 "-h" => {
                     return_arguments.help = true;
+                    print_help();
                 }
-                "-v" => {
+                "-version" => {
+                    return_arguments.version = true;
+                    const VERSION: &str = env!("CARGO_PKG_VERSION");
+                    println!("version: {}", VERSION);
+                }
+                "-verbose" => {
                     return_arguments.verbose = true;
+                    println!("verbose output enabled");
                 }
                 "-g" => {
                     return_arguments.generate_data = true;

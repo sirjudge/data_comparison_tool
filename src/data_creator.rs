@@ -1,14 +1,8 @@
-use std::i16;
-use async_std::task::block_on;
 use rand::{ thread_rng, Rng};
 use crate::data_querier::get_mysql_connection;
 
-pub(crate) async fn generate_mysql_test_data(num_rows_to_generate: i16, table_name_1: &str, table_name_2: &str) {
-    block_on(create_new_data(num_rows_to_generate, table_name_1));
-    block_on(create_new_data(num_rows_to_generate, table_name_2));
-}
-
-pub(crate) async fn create_new_data(num_rows_to_generate: i16, table_name: &str){
+pub(crate) async fn create_new_data(num_rows_to_generate: i32, table_name: &str){
+    //TODO: eventually should really introduce some kind of JSON schema input
     let pool = get_mysql_connection("test").await;
     let create_new_table_query = format!(
         "CREATE TABLE IF NOT EXISTS {} 
@@ -53,7 +47,7 @@ pub(crate) async fn create_new_data(num_rows_to_generate: i16, table_name: &str)
 
 fn random_long(max: i32) -> i32 {
     let n: i32 = thread_rng().gen_range(1..max);
-    return n;
+    n
 }
 
 fn random_string(len: usize) -> String {
@@ -64,7 +58,7 @@ fn random_string(len: usize) -> String {
         let index = rng.gen_range(0..characters.len());
         result.push(characters[index]);
     }
-    return result;
+    result
 }
 
 pub(crate) async fn clear_sqlite_data(){
