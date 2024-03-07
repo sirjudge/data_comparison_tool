@@ -3,12 +3,18 @@ use sqlx::{ migrate::MigrateDatabase, mysql::{MySqlColumn, MySqlPoolOptions, MyS
 //TODO: add this back in when I add dateTime support
 //use chrono::{Local, DateTime};
 
+/// Struct to hold the table properties to pass over to the sqlite querier
 pub struct TableData {
+    /// name of the table you're querying
     pub table_name: String,
+    /// list of columns in the table
     pub columns: Vec<MySqlColumn>,
+    /// primary key of the table we're joinin on
     pub primary_key: String
 }
 
+/// given a table now select 1 row from the table and extract 
+/// a list of columns and the primary key
 pub(crate) async fn get_mysql_table_data(table_name: &str) -> TableData {
     let pool = get_mysql_connection("test").await;
     let result = sqlx::query(&format!("select * from {} limit 1", table_name))
@@ -21,6 +27,8 @@ pub(crate) async fn get_mysql_table_data(table_name: &str) -> TableData {
             for column in columns {
                 column_names.push(column.clone());
             }
+
+            //TODO: add support to extract the actual primary key
             TableData {
                 table_name: table_name.to_string(),
                 columns: column_names,
@@ -33,6 +41,7 @@ pub(crate) async fn get_mysql_table_data(table_name: &str) -> TableData {
     }
 }
 
+/// open a connection to the sqlite database
 pub(crate) async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
     let db_url = "sqlite://./db.sqlite3";
 
@@ -56,6 +65,7 @@ pub(crate) async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
     }
 }
 
+/// open a connection to the mysql databse
 pub(crate) async fn get_mysql_connection(database_name: &str) -> Pool<MySql>{
     let db_url = format!("mysql://root:@0.0.0.0:3306/{}", database_name);
     let result = MySqlPoolOptions::new()
@@ -71,6 +81,8 @@ pub(crate) async fn get_mysql_connection(database_name: &str) -> Pool<MySql>{
     }
 }
 
+/// open a connection to the mysql databse, executes the query and then 
+/// returns a vector of the rows returned
 pub(crate) async fn query_mysql(query_string: &str, database: &str) -> Vec<MySqlRow> {
     // open a connection to the test db and execute the query
     let pool = get_mysql_connection(database).await;
@@ -92,6 +104,8 @@ pub(crate) async fn query_mysql(query_string: &str, database: &str) -> Vec<MySql
     }
 }
 
+/// Converts a batch of MySql rows to a sqlite new sqlite table
+/// and inserts the rows into the new table
 pub(crate) async fn mysql_table_to_sqlite_table(mysql_rows: &Vec<MySqlRow>, table_data: &TableData) {
     // open a new sqlite connection and execute the create statment
     let sqlite_pool = get_sqlite_connection().await;
@@ -119,28 +133,29 @@ pub(crate) async fn mysql_table_to_sqlite_table(mysql_rows: &Vec<MySqlRow>, tabl
 }
 
 // generates a new sqlite table from a passed in mysql row
-async fn create_new_sqlite_table(mysql_rows: &Vec<MySqlRow>, sqlite_pool: &Pool<sqlx::Sqlite>, table_name: &str) -> bool {
+async fn create_new_sqlite_table(mysql_rows: &[MySqlRow], sqlite_pool: &Pool<sqlx::Sqlite>, table_name: &str) -> bool {
     // extract table information
     // init insert query string
     let mut create_query  = format!("create table if not exists {} (", table_name );
    
     // for each column in the first mysql row generate the column name and type
     for column in mysql_rows[0].columns(){
-        create_query.push_str(&column.name());
-        create_query.push_str(" ");
+        create_query.push_str(column.name());
+        create_query.push(' ');
         create_query.push_str(&mysql_type_to_sqlite_type(column.type_info().name()));
-        create_query.push_str(",");
+        create_query.push(',');
     }
 
     // pop the last char off the string (,) and insert closing parens
     create_query.pop();
-    create_query.push_str(")");
+    create_query.push(')');
+    println!("create query: {}", create_query);
     let result = sqlx::query(create_query.as_str())
         .execute(sqlite_pool)
         .await;
     match result {
         Ok(_) => {
-            return true;
+            true
         }
         Err(error) => {
             panic!("error occurred while generating the new sqlite table: {:?}", error);
