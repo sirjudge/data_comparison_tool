@@ -1,6 +1,5 @@
 use sqlx::SqlitePool;
-use crate::data_querier::TableData;
-use crate::data_querier;
+use crate::data_querier::{TableData, get_sqlite_connection};
 
 pub struct ComparisonData {
     pub unique_table_1_rows: Vec<sqlx::sqlite::SqliteRow>,
@@ -15,7 +14,8 @@ fn new (
         unique_table_2_data: Vec<sqlx::sqlite::SqliteRow>,
         changed_rows_data: Vec<sqlx::sqlite::SqliteRow>,
         ) -> ComparisonData {
-   
+
+    // initialize the table data objects
     let t1_data = TableData {
             table_name: String::from(""),
             primary_key: String::from(""),
@@ -27,6 +27,7 @@ fn new (
             columns: Vec::new(),
     };
 
+    // return the new comparison object
     ComparisonData {
         unique_table_1_rows: unique_table_1_data,
         unique_table_2_rows: unique_table_2_data,
@@ -36,16 +37,18 @@ fn new (
     }
 }
 
+/// Compare two sqlite tables and return the differences
 pub(crate) async fn compare_sqlite_tables(
     table_data_1: &TableData,
     table_data_2: &TableData) -> ComparisonData {
-    let sqlite_pool = data_querier::get_sqlite_connection().await;
+    let sqlite_pool = get_sqlite_connection().await;
     let sqlite_rows_1 = get_unique_rows(table_data_1, table_data_2, &sqlite_pool).await;
     let sqlite_rows_2 = get_unique_rows(table_data_2, table_data_1, &sqlite_pool).await;
     let changed_rows = get_changed_rows(table_data_1, table_data_2, &sqlite_pool).await;
     new(sqlite_rows_1, sqlite_rows_2,changed_rows,)
 }
 
+/// Get the rows that where the two primary keys match but the other columns differ
 async fn get_changed_rows(
     sqlite_table_1: &TableData,
     sqlite_table_2: &TableData,
@@ -76,6 +79,7 @@ async fn get_changed_rows(
 
 }
 
+/// Gets the rows that are unique to the first table and do not eixst in the second
 async fn get_unique_rows(
     sqlite_table_1: &TableData,
     sqlite_table_2: &TableData,

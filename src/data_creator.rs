@@ -30,10 +30,10 @@ pub(crate) async fn create_new_data(num_rows_to_generate: i32, table_name: &str)
         let insert_query = format!("INSERT INTO {}(randomNumber,secondRandomNumber,randomString,secondRandomString) 
             VALUES (?,?,?,?)", table_name);
         let result = sqlx::query(&insert_query)
-            .bind(random_long(100))
-            .bind(random_long(100))
-            .bind(random_string(50))
-            .bind(random_string(50))
+            .bind(random_long(500))
+            .bind(random_long(500))
+            .bind(random_string(25))
+            .bind(random_string(25))
             .execute(&pool)
             .await;
         match result {
@@ -44,6 +44,7 @@ pub(crate) async fn create_new_data(num_rows_to_generate: i32, table_name: &str)
         }
     }
 }
+
 
 fn random_long(max: i32) -> i32 {
     let n: i32 = thread_rng().gen_range(1..max);

@@ -9,7 +9,6 @@ mod data_comparer;
 fn main() {
     let args = argument_parser::parse_arguments();
 
-
     // create new amount of random data
     if args.generate_data {
         println!("Starting data generation");
