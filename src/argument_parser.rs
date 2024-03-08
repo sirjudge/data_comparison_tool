@@ -1,7 +1,8 @@
 use chrono::{Local};
 
 pub struct Arguments {
-    pub mysql_query: String, 
+    pub mysql_query_1: String,
+    pub mysql_query_2: String,
     pub generate_data: bool,
     pub verbose: bool,
     pub version: bool,
@@ -16,7 +17,9 @@ pub(crate) fn print_help(){
     println!("Help requested! This is a tool to help compare large data sets between mysql and sqlite"); 
     println!("Usage: data_comparison");
     println!("\t-h : print this help message");
-    println!("\t-q=<query> : specify a mysql query to run");
+    println!("\t-help : print this help message");
+    println!("\t-q1=<query> : specify a first mysql query to run");
+    println!("\t-q2=<query> : specify a second mysql query to run");
     println!("\t-gen : generate new data in mysql");
     println!("\t-verbose : verbose output");
     println!("\t-version : print version information");
@@ -30,7 +33,8 @@ pub(crate) fn parse_arguments() -> Arguments{
     let current_date_stamp = Local::now().format("%Y%m%d%H%M%S").to_string();
 
     let mut return_arguments = Arguments{
-        mysql_query: "select * from test_table".to_string(),
+        mysql_query_1: "select * from table_1".to_string(),
+        mysql_query_2: "select * from table_2".to_string(),
         generate_data: false,
         verbose: false,
         version: false,
@@ -52,8 +56,8 @@ pub(crate) fn parse_arguments() -> Arguments{
             std::env::set_var(flag.unwrap(), value.unwrap());
             match flag.unwrap() {
                 "-q" => {
-                    return_arguments.mysql_query = value.unwrap().to_string();
-                    println!("query: {}", return_arguments.mysql_query);
+                    return_arguments.mysql_query_1= value.unwrap().to_string();
+                    println!("query: {}", return_arguments.mysql_query_1);
                 }
                 "-gen" => {
                     return_arguments.generate_data = true;
@@ -82,6 +86,10 @@ pub(crate) fn parse_arguments() -> Arguments{
                     return_arguments.clean = true;
                     println!("cleaning sqlite database files");
                 }
+                "-help" => {
+                    return_arguments.help = true;
+                    print_help();
+                }
                 "-h" => {
                     return_arguments.help = true;
                     print_help();
@@ -97,6 +105,7 @@ pub(crate) fn parse_arguments() -> Arguments{
                 }
                 "-g" => {
                     return_arguments.generate_data = true;
+                    println!("generating data");
                 }
                 &_ => {
                     println!("Unknown argument:{}",arg);
@@ -104,5 +113,5 @@ pub(crate) fn parse_arguments() -> Arguments{
             }
         }
     }
-    return return_arguments;
+    return_arguments
 }

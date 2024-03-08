@@ -1,6 +1,7 @@
 use rand::{ thread_rng, Rng};
 use crate::data_querier::get_mysql_connection;
 
+/// Create a new table in the mysql database and populate it with random data
 pub(crate) async fn create_new_data(num_rows_to_generate: i32, table_name: &str){
     //TODO: eventually should really introduce some kind of JSON schema input
     let pool = get_mysql_connection("test").await;
@@ -25,7 +26,9 @@ pub(crate) async fn create_new_data(num_rows_to_generate: i32, table_name: &str)
             panic!("error: {:?}", error);
         }
     }
-    
+   
+
+    // loop from 0 to the number of rows passed in and create a new row
     for _i in 0..num_rows_to_generate {
         let insert_query = format!("INSERT INTO {}(randomNumber,secondRandomNumber,randomString,secondRandomString) 
             VALUES (?,?,?,?)", table_name);
@@ -46,11 +49,13 @@ pub(crate) async fn create_new_data(num_rows_to_generate: i32, table_name: &str)
 }
 
 
+/// using thread_rng generate a random number between 1 and max
 fn random_long(max: i32) -> i32 {
     let n: i32 = thread_rng().gen_range(1..max);
     n
 }
 
+/// using thread_rng and a vector of characters generate a random string of length len
 fn random_string(len: usize) -> String {
     let mut rng = thread_rng();
     let characters: Vec<char> = "abcdefghijklmnopqrstuvwxyz".chars().collect();
@@ -62,6 +67,7 @@ fn random_string(len: usize) -> String {
     result
 }
 
+/// Cleans up all sqlite files inside the current executing directory
 pub(crate) async fn clear_sqlite_data(){
     // get all files in the current directory
     let files = std::fs::read_dir(".").unwrap();

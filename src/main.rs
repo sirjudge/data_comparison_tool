@@ -10,7 +10,14 @@ mod data_comparer;
 fn main() {
     let args = argument_parser::parse_arguments();
 
-    // create new amount of random data
+    // if help is passed in we want to early return and not do anything else
+    // helps prevent people from doing something after pushing the help flag
+    if args.help {
+        return
+    }
+
+    // if the generate data flag is set then generate the data
+    // for the two tables passed in 
     if args.generate_data {
         println!("Starting data generation");
         let mut now = SystemTime::now(); 
@@ -37,19 +44,19 @@ fn main() {
         }
     }
 
+    // if the clean flag is set then clean up the sqlite databses
     if args.clean {
         block_on(data_creator::clear_sqlite_data());
         println!("cleaned sqlite database");
     }
 
-    // extract mysql data
+    // extract mysql data ino the table data struct
     let table_1_data = block_on(data_querier::get_mysql_table_data(&args.table_name_1));
     let table_2_data = block_on(data_querier::get_mysql_table_data(&args.table_name_2));
 
-    // build query statment
+    // generate the select statements + return the rows generated from the select statement
     let query_1 = format!("select * from {}", args.table_name_1);
     let query_2 = format!("select * from {}", args.table_name_2);
-
     let database_name = "test";
     let mysql_rows_1= block_on(data_querier::query_mysql(&query_1,database_name ));
     let mysql_rows_2 = block_on(data_querier::query_mysql(&query_2, database_name));
@@ -60,9 +67,7 @@ fn main() {
         Ok(elapsed) => {
             println!("Time it took to migrate data to sqlite for table 1: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
         }
-        Err(e) => {
-            panic!("An error occured: {:?}", e);
-        }
+        Err(e) => { panic!("An error occured: {:?}", e); }
     }
 
     now = SystemTime::now();
@@ -71,9 +76,7 @@ fn main() {
         Ok(elapsed) => {
             println!("Time it took to migrate data to sqlite for table 2: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
         }
-        Err(e) => {
-            panic!("An error occured: {:?}", e);
-        }
+        Err(e) => { panic!("An error occured: {:?}", e); }
     }
 
     // compare the data
@@ -83,13 +86,12 @@ fn main() {
         Ok(elapsed) => {
             println!("Time it took to compare both tables: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
         }
-        Err(e) => {
-            panic!("An error occured: {:?}", e);
-        }
+        Err(e) => { panic!("An error occured: {:?}", e); }
     }
     print_results(result);
 }
 
+/// Prints the results of the comparison in a nice clean fashion
 fn print_results(result: data_comparer::ComparisonData){
     println!("rows in table 1 that are not in table 2: {}", result.unique_table_1_rows.len());
     println!("rows in table 2 that are not in table 1: {}", result.unique_table_2_rows.len());

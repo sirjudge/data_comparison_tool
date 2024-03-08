@@ -149,7 +149,8 @@ async fn create_new_sqlite_table(mysql_rows: &[MySqlRow], sqlite_pool: &Pool<sql
     // pop the last char off the string (,) and insert closing parens
     create_query.pop();
     create_query.push(')');
-    println!("create query: {}", create_query);
+   
+    // execute and return the result
     let result = sqlx::query(create_query.as_str())
         .execute(sqlite_pool)
         .await;
@@ -171,8 +172,8 @@ fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> S
 
     // generate the column insert list
     for column in mysql_rows[0].columns() {
-        insert_query.push_str(&column.name());
-        insert_query.push_str(",");
+        insert_query.push_str(column.name());
+        insert_query.push(',');
     }
 
     insert_query.pop();
@@ -192,17 +193,17 @@ fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> S
                 "INT" => {
                     let value: i32 = row.get(column_name);
                     value_insert_string.push_str(&value.to_string());
-                    value_insert_string.push_str(",");
+                    value_insert_string.push(',');
                 }
                 "VARCHAR" => {
                     let value: String = row.get(column_name);
-                    value_insert_string.push_str("'");
+                    value_insert_string.push('\'');
                     value_insert_string.push_str(&value);
                     value_insert_string.push_str("',");
                 }
                 &_ => {
                     let value: String = row.get(column_name);
-                    value_insert_string.push_str("'");
+                    value_insert_string.push('\'');
                     value_insert_string.push_str(&value);
                     value_insert_string.push_str("',");
                 }
