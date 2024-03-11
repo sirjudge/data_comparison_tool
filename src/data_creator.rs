@@ -28,6 +28,8 @@ pub(crate) async fn create_new_data(num_rows_to_generate: i32, table_name: &str)
     }
    
 
+    // TODO: this should be sped up by using either multithreading 
+    // or by using a single insert statement with multiple values
     // loop from 0 to the number of rows passed in and create a new row
     for _i in 0..num_rows_to_generate {
         let insert_query = format!("INSERT INTO {}(randomNumber,secondRandomNumber,randomString,secondRandomString) 
