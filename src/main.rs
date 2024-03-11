@@ -79,7 +79,7 @@ fn main() {
 
     // compare the data
     now = SystemTime::now();
-    let result = block_on(data_comparer::compare_sqlite_tables(&table_1_data,&table_2_data));
+    let result = block_on(data_comparer::compare_sqlite_tables(&table_1_data,&table_2_data, args.create_sqlite_comparison_files, args.in_memory_sqlite));
     match now.elapsed(){
         Ok(elapsed) => {
             println!("Time it took to compare both tables: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());

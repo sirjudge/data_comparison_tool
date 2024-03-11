@@ -40,11 +40,21 @@ fn new (
 /// Compare two sqlite tables and return the differences
 pub(crate) async fn compare_sqlite_tables(
     table_data_1: &TableData,
-    table_data_2: &TableData) -> ComparisonData {
+    table_data_2: &TableData, 
+    create_sqlite_comparison_files: bool,
+    in_memory_sqlite: bool
+    ) -> ComparisonData {
+
+    if in_memory_sqlite && create_sqlite_comparison_files {
+        println!("using in memory sqlite for data comparison");
+         
+    }
+    
+
     let sqlite_pool = get_sqlite_connection().await;
-    let sqlite_rows_1 = get_unique_rows(table_data_1, table_data_2, &sqlite_pool).await;
-    let sqlite_rows_2 = get_unique_rows(table_data_2, table_data_1, &sqlite_pool).await;
-    let changed_rows = get_changed_rows(table_data_1, table_data_2, &sqlite_pool).await;
+    let sqlite_rows_1 = get_unique_rows(table_data_1, table_data_2, &sqlite_pool, create_sqlite_comparison_files).await;
+    let sqlite_rows_2 = get_unique_rows(table_data_2, table_data_1, &sqlite_pool, create_sqlite_comparison_files).await;
+    let changed_rows = get_changed_rows(table_data_1, table_data_2, &sqlite_pool, create_sqlite_comparison_files).await;
     new(sqlite_rows_1, sqlite_rows_2,changed_rows,)
 }
 
@@ -52,10 +62,14 @@ pub(crate) async fn compare_sqlite_tables(
 async fn get_changed_rows(
     sqlite_table_1: &TableData,
     sqlite_table_2: &TableData,
-    sqlite_pool: &SqlitePool
+    sqlite_pool: &SqlitePool,
+    create_sqlite_comparison_files: bool
     ) -> Vec<sqlx::sqlite::SqliteRow> {
     // generate a select statement to find rows that have the same primary id but differ in other columns
-    let select_query = format!(
+   
+    let mut select_query = String::new();
+    if create_sqlite_comparison_files {
+    select_query = format!(
         "create table changedRows_{} 
         as 
         select * 
@@ -70,6 +84,20 @@ async fn get_changed_rows(
         sqlite_table_1.primary_key,
         sqlite_table_2.primary_key,
         sqlite_table_1.table_name);
+    }
+    else {
+        select_query = format!(
+        "
+        select * 
+        from {} 
+        where exists (
+            select * from {} where {} = {}
+        );",
+        sqlite_table_1.table_name,
+        sqlite_table_2.table_name,
+        sqlite_table_1.primary_key,
+        sqlite_table_2.primary_key);
+    }
 
     // execute select query
     let rows = sqlx::query(select_query.as_str())
@@ -92,24 +120,41 @@ async fn get_changed_rows(
 async fn get_unique_rows(
     sqlite_table_1: &TableData,
     sqlite_table_2: &TableData,
-    sqlite_pool: &SqlitePool
+    sqlite_pool: &SqlitePool,
+    create_sqlite_comparison_files: bool
     ) -> Vec<sqlx::sqlite::SqliteRow> {
-    // generate select statement and join on the primary key 
-    let select_query = format!(
-        "create table unique_{} 
-        as 
-        select * 
-        from {} 
-        where not exists (
-            select * from {} where {} = {}
-        ); 
-        select * from unique_{}",
-        sqlite_table_1.table_name,
-        sqlite_table_1.table_name,
-        sqlite_table_2.table_name,
-        sqlite_table_1.primary_key,
-        sqlite_table_2.primary_key,
-        sqlite_table_1.table_name);
+
+    let mut select_query = String::new();
+    if create_sqlite_comparison_files{
+        // generate select statement and join on the primary key 
+        select_query = format!(
+            "create table unique_{} 
+            as 
+            select * 
+            from {} 
+            where not exists (
+                select * from {} where {} = {}
+                ); 
+            select * from unique_{}",
+            sqlite_table_1.table_name,
+            sqlite_table_1.table_name,
+            sqlite_table_2.table_name,
+            sqlite_table_1.primary_key,
+            sqlite_table_2.primary_key,
+            sqlite_table_1.table_name);
+    }
+    else {
+        select_query = format!(
+            "select * 
+            from {} 
+            where not exists (
+                select * from {} where {} = {}
+            );",
+            sqlite_table_1.table_name,
+            sqlite_table_2.table_name,
+            sqlite_table_1.primary_key,
+            sqlite_table_2.primary_key); 
+    }
 
     // execute select query
     let rows = sqlx::query(select_query.as_str())

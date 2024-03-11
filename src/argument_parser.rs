@@ -1,18 +1,48 @@
 use chrono::Local;
 
+/// Struct to hold the arguments passed in from the command line
 pub struct Arguments {
+    /// MySql query to run to generate the first tabl
     pub mysql_query_1: String,
+
+    /// MySql query to run to generate the second table
     pub mysql_query_2: String,
+
+    /// flag to generate new data in MySql
     pub generate_data: bool,
+
+    /// flag to enable verbose output
     pub verbose: bool,
+
+    /// flag to print version information
     pub version: bool,
+
+    /// flag to print help information
     pub help: bool,
+
+    /// flag to clean the sqlite database files up
     pub clean: bool,
+
+    /// number of rows to generate in mysql. Requires the -gen flag to be set
     pub number_of_rows_to_generate: i32,
+
+    /// name of the first table to compare
     pub table_name_1: String,
-    pub table_name_2: String
+
+    /// name of the second table to compare
+    pub table_name_2: String,
+
+    /// flag to create sqlite comparison files while in flight
+    pub create_sqlite_comparison_files: bool,
+
+    /// flag to use in memory sqlite database instead of file based
+    pub in_memory_sqlite: bool,
+
+    /// flag to auto select yes to all prompts
+    pub auto_yes: bool
 }
 
+/// prints the urrent flags and their descriptions
 pub(crate) fn print_help(){
     println!("Help requested! This is a tool to help compare large data sets between mysql and sqlite"); 
     println!("Usage: data_comparison");
@@ -26,6 +56,9 @@ pub(crate) fn print_help(){
     println!("\t-c : clean sqlite database");
     println!("\t-t1=<table_name> : specify the name of the first table to compare");
     println!("\t-t2=<table_name> : specify the name of the second table to compare");
+    println!("\t-in-memory : use an in memory sqlite database instead of file based");
+    println!("\t-create-in-flight : create sqlite comparison files while in flight");
+    println!("\t-auto-yes : automatically answer yes to all prompts");
 }
 
 pub(crate) fn parse_arguments() -> Arguments{
@@ -42,7 +75,10 @@ pub(crate) fn parse_arguments() -> Arguments{
         clean: true,
         number_of_rows_to_generate: 0,
         table_name_1: format!("table_1{}", current_date_stamp),
-        table_name_2: format!("table_2{}", current_date_stamp)
+        table_name_2: format!("table_2{}", current_date_stamp),
+        create_sqlite_comparison_files: true,
+        in_memory_sqlite: false,
+        auto_yes: false
     };
    
     // loop over each argument
@@ -82,10 +118,6 @@ pub(crate) fn parse_arguments() -> Arguments{
         // if arg doesn't contain an = then we can just check the whole flag
         else {
             match arg.as_str() {
-                "-c" => {
-                    return_arguments.clean = true;
-                    println!("cleaning sqlite database files");
-                }
                 "-help" => {
                     return_arguments.help = true;
                     print_help();
@@ -103,9 +135,25 @@ pub(crate) fn parse_arguments() -> Arguments{
                     return_arguments.verbose = true;
                     println!("verbose output enabled");
                 }
+                "-c" => {
+                    return_arguments.clean = true;
+                    println!("cleaning sqlite database files");
+                }
                 "-g" => {
                     return_arguments.generate_data = true;
                     println!("generating data");
+                }
+                "-in-memory" => {
+                    return_arguments.in_memory_sqlite = true;
+                    println!("using in memory sqlite database");
+                }
+                "-create-in-flight" => {
+                    return_arguments.create_sqlite_comparison_files = true;
+                    println!("creating sqlite comparison files while in flight");
+                }
+                "-auto-yes" => {
+                    return_arguments.auto_yes = true;
+                    println!("auto yes enabled");
                 }
                 &_ => {
                     println!("Unknown argument:{}",arg);
