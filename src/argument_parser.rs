@@ -1,4 +1,4 @@
-use chrono::{Local};
+use chrono::Local;
 
 pub struct Arguments {
     pub mysql_query_1: String,

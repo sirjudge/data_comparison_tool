@@ -1,5 +1,5 @@
 use async_std::task::block_on;
-use std::time:: {SystemTime};
+use std::time::SystemTime;
 
 mod data_querier;
 mod data_creator;
@@ -12,9 +12,7 @@ fn main() {
 
     // if help is passed in we want to early return and not do anything else
     // helps prevent people from doing something after pushing the help flag
-    if args.help {
-        return
-    }
+    if args.help { return }
 
     // if the generate data flag is set then generate the data
     // for the two tables passed in 

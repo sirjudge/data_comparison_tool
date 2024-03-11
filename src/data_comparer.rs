@@ -56,7 +56,14 @@ async fn get_changed_rows(
     ) -> Vec<sqlx::sqlite::SqliteRow> {
     // generate a select statement to find rows that have the same primary id but differ in other columns
     let select_query = format!(
-        "create table changedRows_{} as select * from {} where exists (select * from {} where {} = {}); select * from changedRows_{}",
+        "create table changedRows_{} 
+        as 
+        select * 
+        from {} 
+        where exists (
+            select * from {} where {} = {}
+        );
+        select * from changedRows_{}",
         sqlite_table_1.table_name,
         sqlite_table_1.table_name,
         sqlite_table_2.table_name,
@@ -89,7 +96,14 @@ async fn get_unique_rows(
     ) -> Vec<sqlx::sqlite::SqliteRow> {
     // generate select statement and join on the primary key 
     let select_query = format!(
-        "create table unique_{} as select * from {} where not exists (select * from {} where {} = {}); select * from unique_{}",
+        "create table unique_{} 
+        as 
+        select * 
+        from {} 
+        where not exists (
+            select * from {} where {} = {}
+        ); 
+        select * from unique_{}",
         sqlite_table_1.table_name,
         sqlite_table_1.table_name,
         sqlite_table_2.table_name,
