@@ -10,21 +10,21 @@ pub struct ComparisonData {
 }
 
 fn new (
-        unique_table_1_data: Vec<sqlx::sqlite::SqliteRow>,
-        unique_table_2_data: Vec<sqlx::sqlite::SqliteRow>,
-        changed_rows_data: Vec<sqlx::sqlite::SqliteRow>,
-        ) -> ComparisonData {
+    unique_table_1_data: Vec<sqlx::sqlite::SqliteRow>,
+    unique_table_2_data: Vec<sqlx::sqlite::SqliteRow>,
+    changed_rows_data: Vec<sqlx::sqlite::SqliteRow>,
+    ) -> ComparisonData {
 
     // initialize the table data objects
     let t1_data = TableData {
-            table_name: String::from(""),
-            primary_key: String::from(""),
-            columns: Vec::new(),
-        };
+        table_name: String::from(""),
+        primary_key: String::from(""),
+        columns: Vec::new(),
+    };
     let t2_data =  TableData {
-            table_name: String::from(""),
-            primary_key: String::from(""),
-            columns: Vec::new(),
+        table_name: String::from(""),
+        primary_key: String::from(""),
+        columns: Vec::new(),
     };
 
     // return the new comparison object
@@ -41,15 +41,26 @@ fn new (
 pub(crate) async fn compare_sqlite_tables(
     table_data_1: &TableData,
     table_data_2: &TableData, 
-    create_sqlite_comparison_files: bool,
+    mut create_sqlite_comparison_files: bool,
     in_memory_sqlite: bool
     ) -> ComparisonData {
 
     if in_memory_sqlite && create_sqlite_comparison_files {
-        println!("using in memory sqlite for data comparison");
-         
+        println!("using in memory sqlite for data comparison,
+                 this will be faster but will not save the comparison 
+                 data to disk, do you want to continue? (yes/no)");
+        // read from std in 
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).unwrap();
+        if input == "yes\n" || input == "y" {
+            println!("continuing with in memory sqlite"); 
+            create_sqlite_comparison_files = false;
+        }
+        else {
+            println!("exiting program");
+            std::process::exit(0);
+        }
     }
-    
 
     let sqlite_pool = get_sqlite_connection().await;
     let sqlite_rows_1 = get_unique_rows(table_data_1, table_data_2, &sqlite_pool, create_sqlite_comparison_files).await;
@@ -66,37 +77,37 @@ async fn get_changed_rows(
     create_sqlite_comparison_files: bool
     ) -> Vec<sqlx::sqlite::SqliteRow> {
     // generate a select statement to find rows that have the same primary id but differ in other columns
-   
-    let mut select_query = String::new();
+
+    let select_query;
     if create_sqlite_comparison_files {
-    select_query = format!(
-        "create table changedRows_{} 
-        as 
-        select * 
-        from {} 
-        where exists (
-            select * from {} where {} = {}
-        );
-        select * from changedRows_{}",
-        sqlite_table_1.table_name,
-        sqlite_table_1.table_name,
-        sqlite_table_2.table_name,
-        sqlite_table_1.primary_key,
-        sqlite_table_2.primary_key,
-        sqlite_table_1.table_name);
+        select_query = format!(
+            "create table changedRows_{} 
+            as 
+            select * 
+            from {} 
+            where exists (
+                select * from {} where {} = {}
+                );
+            select * from changedRows_{}",
+            sqlite_table_1.table_name,
+            sqlite_table_1.table_name,
+            sqlite_table_2.table_name,
+            sqlite_table_1.primary_key,
+            sqlite_table_2.primary_key,
+            sqlite_table_1.table_name);
     }
     else {
         select_query = format!(
-        "
-        select * 
-        from {} 
-        where exists (
-            select * from {} where {} = {}
-        );",
-        sqlite_table_1.table_name,
-        sqlite_table_2.table_name,
-        sqlite_table_1.primary_key,
-        sqlite_table_2.primary_key);
+            "
+            select * 
+            from {} 
+            where exists (
+                select * from {} where {} = {}
+                );",
+                sqlite_table_1.table_name,
+                sqlite_table_2.table_name,
+                sqlite_table_1.primary_key,
+                sqlite_table_2.primary_key);
     }
 
     // execute select query
@@ -124,7 +135,7 @@ async fn get_unique_rows(
     create_sqlite_comparison_files: bool
     ) -> Vec<sqlx::sqlite::SqliteRow> {
 
-    let mut select_query = String::new();
+    let select_query;
     if create_sqlite_comparison_files{
         // generate select statement and join on the primary key 
         select_query = format!(
@@ -149,18 +160,18 @@ async fn get_unique_rows(
             from {} 
             where not exists (
                 select * from {} where {} = {}
-            );",
-            sqlite_table_1.table_name,
-            sqlite_table_2.table_name,
-            sqlite_table_1.primary_key,
-            sqlite_table_2.primary_key); 
+                );",
+                sqlite_table_1.table_name,
+                sqlite_table_2.table_name,
+                sqlite_table_1.primary_key,
+                sqlite_table_2.primary_key); 
     }
 
     // execute select query
     let rows = sqlx::query(select_query.as_str())
         .fetch_all(sqlite_pool)
         .await;
-    
+
     // if no errors return the rows otherwise return that there was an error
     match rows {
         Ok(rows) => {
