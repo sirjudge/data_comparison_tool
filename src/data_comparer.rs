@@ -1,14 +1,26 @@
 use sqlx::SqlitePool;
 use crate::data_querier::{TableData, get_sqlite_connection};
 
+/// Struct to hold the comparison data between the two tables
 pub struct ComparisonData {
+    /// Rows that are unique to the first table and do not exist in the second
+    /// table
     pub unique_table_1_rows: Vec<sqlx::sqlite::SqliteRow>,
+    /// Rows that are unique to the second table and do not exist in the first
+    /// table
     pub unique_table_2_rows: Vec<sqlx::sqlite::SqliteRow>,
+   
+    /// Rows that have the same primary key but differ in other columns
     pub changed_rows: Vec<sqlx::sqlite::SqliteRow>,
+
+    /// The table data for the first table
     pub table_1_data: TableData,
+
+    /// The table data for the second table
     pub table_2_data: TableData,
 }
 
+/// Constructor for the comparison data struct
 fn new (
     unique_table_1_data: Vec<sqlx::sqlite::SqliteRow>,
     unique_table_2_data: Vec<sqlx::sqlite::SqliteRow>,
@@ -52,6 +64,7 @@ pub(crate) async fn compare_sqlite_tables(
         // read from std in 
         let mut input = String::new();
         std::io::stdin().read_line(&mut input).unwrap();
+        //TODO: take in input args auto-yes flag to pass down to here
         if input == "yes\n" || input == "y" {
             println!("continuing with in memory sqlite"); 
             create_sqlite_comparison_files = false;
@@ -61,12 +74,15 @@ pub(crate) async fn compare_sqlite_tables(
             std::process::exit(0);
         }
     }
-
+    
+    // get the sqlite connection, and execute each part of the comparison
     let sqlite_pool = get_sqlite_connection().await;
-    let sqlite_rows_1 = get_unique_rows(table_data_1, table_data_2, &sqlite_pool, create_sqlite_comparison_files).await;
-    let sqlite_rows_2 = get_unique_rows(table_data_2, table_data_1, &sqlite_pool, create_sqlite_comparison_files).await;
-    let changed_rows = get_changed_rows(table_data_1, table_data_2, &sqlite_pool, create_sqlite_comparison_files).await;
-    new(sqlite_rows_1, sqlite_rows_2,changed_rows,)
+   
+    new(
+        get_unique_rows(table_data_1, table_data_2, &sqlite_pool, create_sqlite_comparison_files).await,
+        get_unique_rows(table_data_2, table_data_1, &sqlite_pool, create_sqlite_comparison_files).await,
+        get_changed_rows(table_data_1, table_data_2, &sqlite_pool, create_sqlite_comparison_files).await
+        ,)
 }
 
 /// Get the rows that where the two primary keys match but the other columns differ
