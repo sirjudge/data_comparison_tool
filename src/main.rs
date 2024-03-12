@@ -14,6 +14,7 @@ fn main() {
     // helps prevent people from doing something after pushing the help flag
     if args.help { return }
 
+    
     // if the generate data flag is set then generate the data
     // for the two tables passed in 
     if args.generate_data {
@@ -47,14 +48,25 @@ fn main() {
         block_on(data_creator::clear_sqlite_data());
         println!("cleaned sqlite database");
     }
-
+     
     // extract mysql data ino the table data struct
     let table_1_data = block_on(data_querier::get_mysql_table_data(&args.table_name_1));
     let table_2_data = block_on(data_querier::get_mysql_table_data(&args.table_name_2));
 
+
+    // declare query_1 and query_2 variables but don't give them a value
+    let mut query_1 = args.mysql_query_1;
+    let mut query_2 = args.mysql_query_2;
+
+    if query_1.is_empty()  {
+        query_1 = format!("select * from {}", args.table_name_1);
+    }
+
+    if query_2.is_empty()  {
+        query_2 = format!("select * from {}", args.table_name_2);
+    } 
+    
     // generate the select statements + return the rows generated from the select statement
-    let query_1 = format!("select * from {}", args.table_name_1);
-    let query_2 = format!("select * from {}", args.table_name_2);
     let database_name = "test";
     let mysql_rows_1= block_on(data_querier::query_mysql(&query_1,database_name ));
     let mysql_rows_2 = block_on(data_querier::query_mysql(&query_2, database_name));

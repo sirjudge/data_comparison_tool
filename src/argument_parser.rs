@@ -66,8 +66,8 @@ pub(crate) fn parse_arguments() -> Arguments{
     let current_date_stamp = Local::now().format("%Y%m%d%H%M%S").to_string();
 
     let mut return_arguments = Arguments{
-        mysql_query_1: "select * from table_1".to_string(),
-        mysql_query_2: "select * from table_2".to_string(),
+        mysql_query_1: "".to_string(),
+        mysql_query_2: "".to_string(),
         generate_data: false,
         verbose: false,
         version: false,
