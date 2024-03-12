@@ -14,7 +14,7 @@ pub(crate) async fn create_new_data(num_rows_to_generate: i32, table_name: &str)
             randomString VARCHAR(255) NOT NULL,
             secondRandomString VARCHAR(255) NOT NULL, 
             PRIMARY KEY (id)
-         )", table_name);
+        )", table_name);
     let result = sqlx::query(&create_new_table_query)
         .execute(&pool)
         .await;
@@ -26,26 +26,42 @@ pub(crate) async fn create_new_data(num_rows_to_generate: i32, table_name: &str)
             panic!("error: {:?}", error);
         }
     }
-   
+
+
+
+    let insert_batch_size = 100;
+    let thread_count = 2;
 
     // TODO: this should be sped up by using either multithreading 
     // or by using a single insert statement with multiple values
     // loop from 0 to the number of rows passed in and create a new row
+
+    let mut insert_query =
+        format!(
+            "
+            INSERT INTO {} 
+            (randomNumber,secondRandomNumber,randomString,secondRandomString)  
+            VALUES ", table_name);
     for _i in 0..num_rows_to_generate {
-        let insert_query = format!("INSERT INTO {}(randomNumber,secondRandomNumber,randomString,secondRandomString) 
-            VALUES (?,?,?,?)", table_name);
-        let result = sqlx::query(&insert_query)
-            .bind(random_long(500))
-            .bind(random_long(500))
-            .bind(random_string(25))
-            .bind(random_string(25))
-            .execute(&pool)
-            .await;
-        match result {
-            Ok(_) => { }
-            Err(error) => {
-                panic!("error: {:?}", error);
-            }
+        insert_query.push_str(
+            &format!(
+                "({},'{}','{}','{}'),", 
+                random_long(500),
+                random_long(500),
+                random_string(25),
+                random_string(25)
+                )); 
+    }
+
+    // remove the last comma from the insert query and run
+    insert_query.pop();
+    let result = sqlx::query(&insert_query)
+        .execute(&pool)
+        .await;
+    match result {
+        Ok(_) => { }
+        Err(error) => {
+            panic!("error: {:?}", error);
         }
     }
 }
