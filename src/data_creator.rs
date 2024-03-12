@@ -27,19 +27,9 @@ pub(crate) async fn create_new_data(num_rows_to_generate: i32, table_name: &str)
         }
     }
 
-
-
-    let insert_batch_size = 100;
-    let thread_count = 2;
-
-    // TODO: this should be sped up by using either multithreading 
-    // or by using a single insert statement with multiple values
-    // loop from 0 to the number of rows passed in and create a new row
-
     let mut insert_query =
         format!(
-            "
-            INSERT INTO {} 
+            "INSERT INTO {} 
             (randomNumber,secondRandomNumber,randomString,secondRandomString)  
             VALUES ", table_name);
     for _i in 0..num_rows_to_generate {
@@ -75,12 +65,10 @@ fn random_long(max: i32) -> i32 {
 
 /// using thread_rng and a vector of characters generate a random string of length len
 fn random_string(len: usize) -> String {
-    let mut rng = thread_rng();
     let characters: Vec<char> = "abcdefghijklmnopqrstuvwxyz".chars().collect();
     let mut result = String::new();
     for _ in 0..len {
-        let index = rng.gen_range(0..characters.len());
-        result.push(characters[index]);
+        result.push(characters[thread_rng().gen_range(0..characters.len())]);
     }
     result
 }
