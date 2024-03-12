@@ -59,8 +59,7 @@ pub(crate) async fn create_new_data(num_rows_to_generate: i32, table_name: &str)
 
 /// using thread_rng generate a random number between 1 and max
 fn random_long(max: i32) -> i32 {
-    let n: i32 = thread_rng().gen_range(1..max);
-    n
+    thread_rng().gen_range(1..max)
 }
 
 /// using thread_rng and a vector of characters generate a random string of length len
