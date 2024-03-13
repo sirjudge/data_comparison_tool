@@ -1,5 +1,6 @@
-use sqlx::SqlitePool;
+use sqlx::{Column, SqlitePool};
 use crate::data_querier::{TableData, get_sqlite_connection};
+use chrono;
 
 /// Struct to hold the comparison data between the two tables
 pub struct ComparisonData {
@@ -9,7 +10,7 @@ pub struct ComparisonData {
     /// Rows that are unique to the second table and do not exist in the first
     /// table
     pub unique_table_2_rows: Vec<sqlx::sqlite::SqliteRow>,
-   
+
     /// Rows that have the same primary key but differ in other columns
     pub changed_rows: Vec<sqlx::sqlite::SqliteRow>,
 
@@ -74,15 +75,18 @@ pub(crate) async fn compare_sqlite_tables(
             std::process::exit(0);
         }
     }
-    
+
     // get the sqlite connection, and execute each part of the comparison
     let sqlite_pool = get_sqlite_connection().await;
-   
-    new(
+
+    let comparison_data = new (
         get_unique_rows(table_data_1, table_data_2, &sqlite_pool, create_sqlite_comparison_files).await,
         get_unique_rows(table_data_2, table_data_1, &sqlite_pool, create_sqlite_comparison_files).await,
-        get_changed_rows(table_data_1, table_data_2, &sqlite_pool, create_sqlite_comparison_files).await
-        ,)
+        get_changed_rows(table_data_1, table_data_2, &sqlite_pool, create_sqlite_comparison_files).await,
+        );
+       
+    generate_main_comparison_file(table_data_1, table_data_2, &sqlite_pool).await;
+    comparison_data
 }
 
 /// Get the rows that where the two primary keys match but the other columns differ
@@ -119,11 +123,12 @@ async fn get_changed_rows(
             from {} 
             where exists (
                 select * from {} where {} = {}
-                );",
-                sqlite_table_1.table_name,
-                sqlite_table_2.table_name,
-                sqlite_table_1.primary_key,
-                sqlite_table_2.primary_key);
+                );
+            ",
+            sqlite_table_1.table_name,
+            sqlite_table_2.table_name,
+            sqlite_table_1.primary_key,
+            sqlite_table_2.primary_key);
     }
 
     // execute select query
@@ -140,10 +145,105 @@ async fn get_changed_rows(
             panic!("error: {:?}", error);
         }
     }
-
 }
 
+/// take the currently generated in flight files and combine them into one 
+/// table that has all the changes as follows
+/// If there is no change then the value remains as follows 
+/// |     table_column    |
+/// |     new value       |
+///
+/// If there is a value in table 1 not in table 2 it'll display as follows
+/// |     table_column    |
+/// |     oldValue()      |
+///
+/// If there is a value in table 2 not in table 1 it'll display as follows
+/// |     table_column    |
+/// |     ()newValue      |
+///
+/// If there is a value in table 1 and table 2 but they are different it'll display as follows
+/// |     table_column    |
+/// | oldValue(newValue)  |
+async fn generate_main_comparison_file(sqlite_table_1: &TableData, sqlite_table_2: &TableData, sqlite_pool: &SqlitePool) -> Vec<sqlx::sqlite::SqliteRow>{
+    
+    // extract timestamp from table name
+    let table_name_split = sqlite_table_1.table_name.split('_');
+    let table_name_vec: Vec<&str> = table_name_split.collect();
+    let time_stamp = table_name_vec[1];
+
+    // initialize the main output query
+    let mut comparison_query = format!("create table main_out_{} as select ", chrono::offset::Local::now().timestamp());
+   
+    // iterate through the columns and generate the query to output the differences in tables
+    sqlite_table_1.columns.iter().for_each(|column| {
+        let column_name = column.name();
+        let query_column = format!(
+        "
+        case 
+            when t1.{} is null and t2.{} is not null then '()'||t2.{}
+            when t1.{} is not null and t2.{} is null then t1.{}||'()'
+            when t1.{} != t2.{} then t1.{}||'('||t2.{}||')'
+            else t1.{}
+        end as {},",
+            column_name,
+            column_name,
+            column_name,
+            column_name,
+            column_name,
+            column_name,
+            column_name,
+            column_name,
+            column_name,
+            column_name,
+            column_name,
+            column_name,
+            );
+        comparison_query.push_str(&query_column);
+    });
+
+    comparison_query.pop();
+    let changed_rows_join = format!(
+        "
+        from {} t1
+        left join {} t2 on t1.{} = t2.{}
+        left join unique_{} new on t1.{} = new.{} 
+        left join unique_{} new on t1.{} = new.{} 
+        ",
+        sqlite_table_1.table_name,
+        sqlite_table_2.table_name,
+        sqlite_table_1.primary_key,
+        sqlite_table_2.primary_key,
+        sqlite_table_1.table_name,
+        sqlite_table_1.primary_key,
+        sqlite_table_1.primary_key,
+        sqlite_table_2.table_name,
+        sqlite_table_2.primary_key,
+        sqlite_table_2.primary_key
+        );
+    comparison_query.push_str(&changed_rows_join);
+
+    println!("comparison query: {}", comparison_query);
+
+    // execute query and return the results
+    let rows = sqlx::query(comparison_query.as_str())
+        .fetch_all(sqlite_pool)
+        .await;
+
+    match rows {
+        Ok(rows) => {
+            rows
+        }
+        Err(error) => {
+            panic!("error: {:?}", error);
+        }
+    } 
+}
+
+
+
 /// Gets the rows that are unique to the first table and do not eixst in the second
+/// If create_sqlite_comparison_files is true then the rows are saved to a new table
+/// called unique_{table_name}
 async fn get_unique_rows(
     sqlite_table_1: &TableData,
     sqlite_table_2: &TableData,
@@ -161,7 +261,7 @@ async fn get_unique_rows(
             from {} 
             where not exists (
                 select * from {} where {} = {}
-                ); 
+            ); 
             select * from unique_{}",
             sqlite_table_1.table_name,
             sqlite_table_1.table_name,
@@ -176,11 +276,11 @@ async fn get_unique_rows(
             from {} 
             where not exists (
                 select * from {} where {} = {}
-                );",
-                sqlite_table_1.table_name,
-                sqlite_table_2.table_name,
-                sqlite_table_1.primary_key,
-                sqlite_table_2.primary_key); 
+            );",
+            sqlite_table_2.table_name,
+            sqlite_table_1.table_name,
+            sqlite_table_1.primary_key,
+            sqlite_table_2.primary_key); 
     }
 
     // execute select query
