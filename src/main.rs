@@ -5,7 +5,7 @@ mod data_querier;
 mod data_creator;
 mod argument_parser;
 mod data_comparer;
-
+mod data_exporter;
 
 fn main() {
     let args = argument_parser::parse_arguments();
@@ -14,7 +14,6 @@ fn main() {
     // helps prevent people from doing something after pushing the help flag
     if args.help { return }
 
-    
     // if the generate data flag is set then generate the data
     // for the two tables passed in 
     if args.generate_data {
@@ -98,7 +97,10 @@ fn main() {
         }
         Err(e) => { panic!("An error occured: {:?}", e); }
     }
-    print_results(result);
+
+    if !args.output_file_name.is_empty() {
+        data_exporter::export_data(result, &args.output_file_name, args.output_file_type);
+    }
 }
 
 /// Prints the results of the comparison in a nice clean fashion

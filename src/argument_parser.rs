@@ -1,7 +1,17 @@
 use chrono::Local;
 
+pub enum OutputFileType {
+    CSV,
+    JSON
+}
+
 /// Struct to hold the arguments passed in from the command line
 pub struct Arguments {
+    /// output file path to export data to
+    pub output_file_name: String,
+
+    pub output_file_type: OutputFileType,
+
     /// MySql query to run to generate the first tabl
     pub mysql_query_1: String,
 
@@ -59,6 +69,7 @@ pub(crate) fn print_help(){
     println!("\t-in-memory : use an in memory sqlite database instead of file based");
     println!("\t-create-in-flight : create sqlite comparison files while in flight");
     println!("\t-auto-yes : automatically answer yes to all prompts");
+    println!("\t-output=<output_file> : specify the name of the output csv file");
 }
 
 pub(crate) fn parse_arguments() -> Arguments{
@@ -78,7 +89,9 @@ pub(crate) fn parse_arguments() -> Arguments{
         table_name_2: format!("table_2{}", current_date_stamp),
         create_sqlite_comparison_files: true,
         in_memory_sqlite: false,
-        auto_yes: false
+        auto_yes: false,
+        output_file_name: "".to_string(),
+        output_file_type: OutputFileType::CSV
     };
    
     // loop over each argument
@@ -109,6 +122,24 @@ pub(crate) fn parse_arguments() -> Arguments{
                     let table_name = value.unwrap();
                     return_arguments.table_name_2 = format!("{}{}",table_name, current_date_stamp);
                     println!("table name 2: {}", return_arguments.table_name_2);
+                }
+                "-output" => {
+                    println!("output file: {}", value.unwrap());
+                    return_arguments.output_file_name = value.unwrap().to_string();
+                    let output_file = return_arguments.output_file_name.clone();
+                    let file_type = output_file.split('.');
+                    let file_type = file_type.last().unwrap();
+                    match file_type {
+                        "csv" => {
+                            return_arguments.output_file_type = OutputFileType::CSV;
+                        }
+                        "json" => {
+                            return_arguments.output_file_type = OutputFileType::JSON;
+                        }
+                        _ => {
+                            println!("Unknown file type: {}", file_type);
+                        }
+                    }
                 }
                 &_ => {
                     println!("Unknown argument:{}",arg);
