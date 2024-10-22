@@ -213,7 +213,6 @@ fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> S
         value_insert_string.pop();
         value_insert_string.push_str("),");
 
-        //println!("value insert string: {}", value_insert_string);
         insert_query.push_str(value_insert_string.as_str());
     }
     // remove trailing comma

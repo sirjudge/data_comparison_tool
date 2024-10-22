@@ -17,7 +17,6 @@ fn main() {
     // if the generate data flag is set then generate the data
     // for the two tables passed in 
     if args.generate_data {
-        println!("Starting data generation");
         let mut now = SystemTime::now(); 
         block_on(data_creator::create_new_data(args.number_of_rows_to_generate, &args.table_name_1));
         match now.elapsed(){
@@ -51,7 +50,6 @@ fn main() {
     // extract mysql data ino the table data struct
     let table_1_data = block_on(data_querier::get_mysql_table_data(&args.table_name_1));
     let table_2_data = block_on(data_querier::get_mysql_table_data(&args.table_name_2));
-
 
     // declare query_1 and query_2 variables but don't give them a value
     let mut query_1 = args.mysql_query_1;
@@ -91,6 +89,8 @@ fn main() {
     // compare the data
     now = SystemTime::now();
     let result = block_on(data_comparer::compare_sqlite_tables(&table_1_data,&table_2_data, args.create_sqlite_comparison_files, args.in_memory_sqlite));
+    print_results(&result);
+    
     match now.elapsed(){
         Ok(elapsed) => {
             println!("Time it took to compare both tables: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
@@ -101,10 +101,11 @@ fn main() {
     if !args.output_file_name.is_empty() {
         data_exporter::export_data(result, &args.output_file_name, args.output_file_type);
     }
+
 }
 
 /// Prints the results of the comparison in a nice clean fashion
-fn print_results(result: data_comparer::ComparisonData){
+fn print_results(result: &data_comparer::ComparisonData){
     println!("rows in table 1 that are not in table 2: {}", result.unique_table_1_rows.len());
     println!("rows in table 2 that are not in table 1: {}", result.unique_table_2_rows.len());
     println!("rows that are different between the two tables: {}", result.changed_rows.len());

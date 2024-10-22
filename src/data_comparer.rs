@@ -178,8 +178,7 @@ async fn generate_main_comparison_file(sqlite_table_1: &TableData, sqlite_table_
     sqlite_table_1.columns.iter().for_each(|column| {
         let column_name = column.name();
         let query_column = format!(
-        "
-        case 
+        "case 
             when t1.{} is null and t2.{} is not null then '()'||t2.{}
             when t1.{} is not null and t2.{} is null then t1.{}||'()'
             when t1.{} != t2.{} then t1.{}||'('||t2.{}||')'
@@ -207,7 +206,6 @@ async fn generate_main_comparison_file(sqlite_table_1: &TableData, sqlite_table_
         from {} t1
         left join {} t2 on t1.{} = t2.{}
         left join unique_{} new on t1.{} = new.{} 
-        left join unique_{} new on t1.{} = new.{} 
         ",
         sqlite_table_1.table_name,
         sqlite_table_2.table_name,
@@ -216,9 +214,6 @@ async fn generate_main_comparison_file(sqlite_table_1: &TableData, sqlite_table_
         sqlite_table_1.table_name,
         sqlite_table_1.primary_key,
         sqlite_table_1.primary_key,
-        sqlite_table_2.table_name,
-        sqlite_table_2.primary_key,
-        sqlite_table_2.primary_key
         );
     comparison_query.push_str(&changed_rows_join);
 
