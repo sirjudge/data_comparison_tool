@@ -8,6 +8,10 @@ target/
 *.sqlite3
 *.sqlite3*
 
+# ignore output files
+*.csv
+*.json
+
 # ignore logs
 *.log
 

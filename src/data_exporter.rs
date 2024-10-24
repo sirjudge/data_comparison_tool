@@ -1,7 +1,6 @@
 use crate::data_comparer::ComparisonData;
 use crate::argument_parser::OutputFileType;
-//use csv;
-use sqlx::{ Row, sqlite::{types, SqliteColumn, SqliteTypeInfo}, Column  };
+use sqlx::{ Row, Column  };
 
 pub(crate) fn export_data(result: ComparisonData, output_file_name: &str, output_file_type: OutputFileType){
 
@@ -9,24 +8,40 @@ pub(crate) fn export_data(result: ComparisonData, output_file_name: &str, output
 
     match output_file_type {
         OutputFileType::CSV => {
-            let mut wtr = csv::Writer::from_path(output_file_name).unwrap();
-            for row in result.unique_table_1_rows.iter(){
-                let row = sqlite_row_to_csv(row);
-                wtr.write_record(row).unwrap();
-            }
-            
-            for row in result.unique_table_2_rows.iter(){
-                let row = sqlite_row_to_csv(row);
-                wtr.write_record(row).unwrap();
-            }
-
-            for row in result.changed_rows.iter(){
-                let row = sqlite_row_to_csv(row);
-                wtr.write_record(row).unwrap();
+            if !result.unique_table_1_rows.is_empty() {
+                let unique_table_1_row_file_name = format!("unique_table_1_rows_{}", output_file_name);
+                let mut unique_writer = csv::Writer::from_path(unique_table_1_row_file_name).unwrap();
+                for row in result.unique_table_1_rows.iter(){
+                    let row = sqlite_row_to_csv(row);
+                    unique_writer.write_record(row).unwrap();
+                }
+                
+                unique_writer.flush().unwrap();
+                drop(unique_writer);
             }
 
-            println!("Exported data to file: {}", output_file_name);
-            wtr.flush().unwrap();
+            if !result.unique_table_2_rows.is_empty() {
+                let unique_table_2_row_file_name = format!("unique_table_2_rows_{}", output_file_name);
+                let mut unique_writer2 = csv::Writer::from_path(unique_table_2_row_file_name).unwrap();
+                for row in result.unique_table_2_rows.iter(){
+                    let row = sqlite_row_to_csv(row);
+                    unique_writer2 .write_record(row).unwrap();
+                }
+                unique_writer2.flush().unwrap();
+                drop(unique_writer2);
+            }
+           
+           
+            if !result.changed_rows.is_empty() {
+                let changed_rows_file_name = format!("changed_rows_{}", output_file_name);
+                let mut changed_writer = csv::Writer::from_path(changed_rows_file_name).unwrap();
+                for row in result.changed_rows.iter(){
+                    let row = sqlite_row_to_csv(row);
+                    changed_writer.write_record(row).unwrap();
+                }
+                changed_writer.flush().unwrap();
+                drop(changed_writer);
+            }
         }
         OutputFileType::JSON => {
             panic!("JSON export not implemented yet");
@@ -40,9 +55,6 @@ fn sqlite_row_to_csv(row: &sqlx::sqlite::SqliteRow) -> Vec<String> {
     let number_of_columns = row.columns().len();
     for i in 0..number_of_columns {
         let column_type = row.column(i).type_info().to_string();
-        let column_name = row.column(i).name().to_string();
-        println!("column_name: {}", column_name);
-        println!("column_name: {}", column_type);
         match column_type.as_str() {
             "TEXT" => {
                 let value: String = row.get(i);
@@ -58,7 +70,7 @@ fn sqlite_row_to_csv(row: &sqlx::sqlite::SqliteRow) -> Vec<String> {
             }
             "BLOB" => {
                 let value: String = row.get(i);
-                //TODO:Figure this out later?
+                csv_row.push(value);
             }
             _ => {
                 println!("unknown column type: {}", column_type);
