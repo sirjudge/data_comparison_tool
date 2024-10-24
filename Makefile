@@ -15,3 +15,6 @@ build-release:
 clean:
 	cargo clean
 
+run-mysql:
+	sudo docker compose up
+

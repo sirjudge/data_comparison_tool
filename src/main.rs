@@ -20,15 +20,21 @@ fn main() -> Result<(), io::Error>{
     }
 
     if args.tui {
-        let _ = ui::run_terminal();
+        let result = ui::run_terminal();
+        ratatui::restore();
+        return result;
     }
-    
-    return Ok(());
-    
+   
+    run_comparison(&args);
+
+    // finally return the result
+    Ok(())
+}
+
+fn run_comparison(args: &argument_parser::Arguments) {
     // if the generate data flag is set then generate the data
     // for the two tables passed in 
-    generate_data(&args);
-
+    generate_data(args);
 
     // if the clean flag is set then clean up the sqlite databses
     if args.clean {
@@ -37,14 +43,11 @@ fn main() -> Result<(), io::Error>{
     }
 
     // compare the table data
-    let result = compare_data(&args); 
+    let result = compare_data(args); 
 
     if !args.output_file_name.is_empty() {
         data_exporter::export_data(&result, &args.output_file_name, &args.output_file_type);
     }
-
-    // finally return the result
-    Ok(())
 }
 
 fn compare_data(args: &argument_parser::Arguments) -> ComparisonData {
