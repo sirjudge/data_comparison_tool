@@ -1,5 +1,20 @@
 use async_std::task::block_on;
+use data_comparer::ComparisonData;
 use std::time::SystemTime;
+use std::{io, thread, time::Duration};
+use tui::{
+    backend::{CrosstermBackend, Backend},
+    widgets::{Widget, Block, Borders, List, ListItem, Table, Row},
+    layout::{Layout, Constraint, Direction},
+    Terminal,
+    Frame,
+    style::{Style, Color, Modifier},
+};
+use crossterm::{
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
 
 mod data_querier;
 mod data_creator;
@@ -7,53 +22,83 @@ mod argument_parser;
 mod data_comparer;
 mod data_exporter;
 
-fn main() {
+fn main() -> Result<(), io::Error>{
     let args = argument_parser::parse_arguments();
 
     // if help is passed in we want to early return and not do anything else
     // helps prevent people from doing something after pushing the help flag
-    if args.help { return }
+    if args.help { 
+        return Ok(());
+    }
 
+    if args.tui {
+        enable_raw_mode()?;
+        let mut stdout = io::stdout();
+        execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+        let backend = CrosstermBackend::new(stdout);
+        let mut terminal = Terminal::new(backend)?;
+
+        terminal.draw(|f| {
+            let size = f.size();
+            let block = Block::default()
+                .title("Comparison tool")
+                .borders(Borders::ALL);
+            
+            let items = [ListItem::new("Item 1"), ListItem::new("Item 2"), ListItem::new("Item 3")];
+            let list = List::new(items)
+                .block(Block::default().title("List").borders(Borders::ALL))
+                .style(Style::default().fg(Color::White))
+                .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
+                .highlight_symbol(">>");
+
+            f.render_widget(block, size);
+            f.render_widget(list,size)
+        })?;
+
+        thread::sleep(Duration::from_millis(5000));
+
+        // restore terminal
+        disable_raw_mode()?;
+        execute!(
+            terminal.backend_mut(),
+            LeaveAlternateScreen,
+            DisableMouseCapture
+        )?;
+        terminal.show_cursor()?;
+    }
+    
+    return Ok(());
+    
     // if the generate data flag is set then generate the data
     // for the two tables passed in 
-    if args.generate_data {
-        let mut now = SystemTime::now(); 
-        block_on(data_creator::create_new_data(args.number_of_rows_to_generate, &args.table_name_1));
-        match now.elapsed(){
-            Ok(elapsed) => {
-                println!("Time it took to create data: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
-            }
-            Err(e) => {
-                panic!("An error occured: {:?}", e);
-            }
-        }
+    generate_data(&args);
 
-        println!("starting second data generation");
-        now = SystemTime::now();
-        block_on(data_creator::create_new_data(args.number_of_rows_to_generate, &args.table_name_2));
-        match now.elapsed(){
-            Ok(elapsed) => {
-                println!("Time it took to create 2nd table: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
-            }
-            Err(e) => {
-                panic!("An error occured: {:?}", e);
-            }
-        }
-    }
 
     // if the clean flag is set then clean up the sqlite databses
     if args.clean {
         block_on(data_creator::clear_sqlite_data());
         println!("cleaned sqlite database");
     }
-     
+
+    // compare the table data
+    let result = compare_data(&args); 
+
+    if !args.output_file_name.is_empty() {
+        data_exporter::export_data(&result, &args.output_file_name, &args.output_file_type);
+    }
+
+    // finally return the result
+    Ok(())
+}
+
+fn compare_data(args: &argument_parser::Arguments) -> ComparisonData {
     // extract mysql data ino the table data struct
     let table_1_data = block_on(data_querier::get_mysql_table_data(&args.table_name_1));
     let table_2_data = block_on(data_querier::get_mysql_table_data(&args.table_name_2));
 
     // declare query_1 and query_2 variables but don't give them a value
-    let mut query_1 = args.mysql_query_1;
-    let mut query_2 = args.mysql_query_2;
+    let mut query_1 = args.mysql_query_1.clone();
+    let mut query_2 = args.mysql_query_2.clone();
 
     if query_1.is_empty()  {
         query_1 = format!("select * from {}", args.table_name_1);
@@ -98,10 +143,8 @@ fn main() {
         Err(e) => { panic!("An error occured: {:?}", e); }
     }
 
-    if !args.output_file_name.is_empty() {
-        data_exporter::export_data(result, &args.output_file_name, args.output_file_type);
-    }
 
+    result
 }
 
 /// Prints the results of the comparison in a nice clean fashion
@@ -109,4 +152,34 @@ fn print_results(result: &data_comparer::ComparisonData){
     println!("rows in table 1 that are not in table 2: {}", result.unique_table_1_rows.len());
     println!("rows in table 2 that are not in table 1: {}", result.unique_table_2_rows.len());
     println!("rows that are different between the two tables: {}", result.changed_rows.len());
+}
+
+/// if args.generate_data is set then generate the data for the two tables
+fn generate_data(args: &argument_parser::Arguments){
+    if !args.generate_data {
+        return
+    };
+
+    let mut now = SystemTime::now(); 
+    block_on(data_creator::create_new_data(args.number_of_rows_to_generate, &args.table_name_1));
+    match now.elapsed(){
+        Ok(elapsed) => {
+            println!("Time it took to create data: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
+        }
+        Err(e) => {
+            panic!("An error occured: {:?}", e);
+        }
+    }
+
+    println!("starting second data generation");
+    now = SystemTime::now();
+    block_on(data_creator::create_new_data(args.number_of_rows_to_generate, &args.table_name_2));
+    match now.elapsed(){
+        Ok(elapsed) => {
+            println!("Time it took to create 2nd table: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
+        }
+        Err(e) => {
+            panic!("An error occured: {:?}", e);
+        }
+    }
 }

@@ -12,3 +12,5 @@ rand = "0.8.5"
 sqlx = {version = "0.7", default-features = false, features = ["runtime-async-std", "macros", "mysql", "time", "sqlite", "migrate"]}
 timer = "0.2.0"
 tokio = {version="1.36.0", feature = ["full", "rt", "macros"] }
+tui = "0.19.0"
+crossterm = "0.25"

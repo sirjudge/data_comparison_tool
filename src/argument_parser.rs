@@ -7,6 +7,9 @@ pub enum OutputFileType {
 
 /// Struct to hold the arguments passed in from the command line
 pub struct Arguments {
+    /// run with terminalUi
+    pub tui: bool,
+
     /// output file path to export data to
     pub output_file_name: String,
 
@@ -58,6 +61,7 @@ pub(crate) fn print_help(){
     println!("Usage: data_comparison");
     println!("\t-h : print this help message");
     println!("\t-help : print this help message");
+    println!("\t-tui : run with terminal ui");
     println!("\t-q1=<query> : specify a first mysql query to run");
     println!("\t-q2=<query> : specify a second mysql query to run");
     println!("\t-gen : generate new data in mysql");
@@ -79,6 +83,7 @@ pub(crate) fn parse_arguments() -> Arguments{
     let mut return_arguments = Arguments{
         mysql_query_1: "".to_string(),
         mysql_query_2: "".to_string(),
+        tui: false,
         generate_data: false,
         verbose: false,
         version: false,
@@ -149,6 +154,9 @@ pub(crate) fn parse_arguments() -> Arguments{
         // if arg doesn't contain an = then we can just check the whole flag
         else {
             match arg.as_str() {
+                "-tui" => {
+                    return_arguments.tui = true;
+                }
                 "-help" => {
                     return_arguments.help = true;
                     print_help();
