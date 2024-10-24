@@ -1,26 +1,14 @@
+use std::{io, thread, time::Duration};
 use async_std::task::block_on;
 use data_comparer::ComparisonData;
 use std::time::SystemTime;
-use std::{io, thread, time::Duration};
-use tui::{
-    backend::{CrosstermBackend, Backend},
-    widgets::{Widget, Block, Borders, List, ListItem, Table, Row},
-    layout::{Layout, Constraint, Direction},
-    Terminal,
-    Frame,
-    style::{Style, Color, Modifier},
-};
-use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-};
 
 mod data_querier;
 mod data_creator;
 mod argument_parser;
 mod data_comparer;
 mod data_exporter;
+mod ui;
 
 fn main() -> Result<(), io::Error>{
     let args = argument_parser::parse_arguments();
@@ -32,39 +20,7 @@ fn main() -> Result<(), io::Error>{
     }
 
     if args.tui {
-        enable_raw_mode()?;
-        let mut stdout = io::stdout();
-        execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-        let backend = CrosstermBackend::new(stdout);
-        let mut terminal = Terminal::new(backend)?;
-
-        terminal.draw(|f| {
-            let size = f.size();
-            let block = Block::default()
-                .title("Comparison tool")
-                .borders(Borders::ALL);
-            
-            let items = [ListItem::new("Item 1"), ListItem::new("Item 2"), ListItem::new("Item 3")];
-            let list = List::new(items)
-                .block(Block::default().title("List").borders(Borders::ALL))
-                .style(Style::default().fg(Color::White))
-                .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-                .highlight_symbol(">>");
-
-            f.render_widget(block, size);
-            f.render_widget(list,size)
-        })?;
-
-        thread::sleep(Duration::from_millis(5000));
-
-        // restore terminal
-        disable_raw_mode()?;
-        execute!(
-            terminal.backend_mut(),
-            LeaveAlternateScreen,
-            DisableMouseCapture
-        )?;
-        terminal.show_cursor()?;
+        let _ = ui::run_terminal();
     }
     
     return Ok(());
