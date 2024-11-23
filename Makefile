@@ -22,6 +22,8 @@ build-release:
 
 clean:
 	cargo clean
+	rm -f *.sqlite*
+	rm -f *.csv
 
 run-mysql:
 	sudo docker compose up

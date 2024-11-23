@@ -1,14 +1,22 @@
 # Description
-- Rust based CLI tool to compare two input data sources and generate a data set of 
-unqiue rows in each data source and common rows in both data sources that have changed 
+- Rust based CLI tool to compare two input data sources and generate a data set of
+unqiue rows in each data source and common rows in both data sources that have changed
 or kept the same
-# Known Bugs
-- the comparison logic is currently under development and is not doing a good job
-# Road Map
-- Add new language support
-   - mssql
-   - postgres
-- Add support for CSV
-- Add Custom column mapping support
-- Add data filtration to let you ignore columns or rows based on filter criteria
-- Add support for exporting data to different formats
+
+# Dependencies
+## Build from source
+- Install and configure the [cargo package manager and rust toolchain](https://doc.rust-lang.org/cargo/getting-started/installation.html)
+
+
+# Running and debugging
+## Overview
+a Makefile has been provided at your benefit to automatically run certain actions.
+## Available options
+- `test-release` => builds in release mode and runs cli binary
+- `test-release-terminal` => builds in release mode and runs TUI flag through cli binary
+- `test-debug` => builds in release mode and runs cli binary
+- `test-debug-terminal` => builds in release mode and runs TUI flag through cli binary
+- `build-debug` => builds in debug mode
+- `build-release` => builds in debug mode
+- `clean` => runs cargo clean and also deletes any current sqlite files created via `cargo run`
+- `run-mysql` => start mysql docker container used during data generation conditions

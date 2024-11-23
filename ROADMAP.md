@@ -11,11 +11,16 @@ the user a visual representation of the work being done.
     - *[M]ain menu*:
 
 # Road-map
-## MSSQL Support
+## New Input types
 - Add [tiberius](https://docs.rs/tiberius/latest/tiberius/) crate and relevant
 logic for MSSQL support as sqlx only has support for PostgreSQL,MySQL,
 MariaDB, and sqlite.
-- initial version should only be
+- CSV files
+## Comparison logic refresh
+- Add custom column mapping
+- Add data filtration to further refine comparison
+## Output file type support
+- Add support to export comparison data in formats other than a csv or sqlite files
 ## Test History
 - Add a test history portion to the UI and CLI flags that allow the user
 to View the currently saved history of preveiously run test configurations
