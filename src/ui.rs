@@ -1,50 +1,73 @@
-use std::{io, thread, time::Duration};
+use std::io;
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Alignment, Constraint, Layout, Rect},
-    style::{
-        palette::tailwind::{BLUE, GREEN, SLATE},
-        Color, 
-        Modifier,
-        Style,
-        Stylize,
-    }, 
-    text::{Line,Text},
-    widgets::{Block, BorderType, Borders, Padding, Paragraph, Wrap},
+    style::{Color, Style, Stylize },
+    text::Text,
+    widgets::{Block, BorderType, Borders, Paragraph, Wrap},
     Frame,
 };
 
-/*
-TODO: this was copied from the example code and probably won't be needed
-const TODO_HEADER_STYLE: Style = Style::new().fg(SLATE.c100).bg(BLUE.c800);
-const NORMAL_ROW_BG: Color = SLATE.c950;
-const ALT_ROW_BG_COLOR: Color = SLATE.c900;
-const SELECTED_STYLE: Style = Style::new().bg(SLATE.c800).add_modifier(Modifier::BOLD);
-const TEXT_FG_COLOR: Color = SLATE.c200;
-const COMPLETED_TEXT_FG_COLOR: Color = GREEN.c500;
-*/
+#[derive(PartialEq)]
+#[derive(Clone)]
+enum UIState {
+    Running,
+    Stopped,
+    MainMenu
+}
 
 pub(crate) fn run_terminal() -> io::Result<()> {
+    // initialize terminal and state of the UI and set the state to main menu
     let mut terminal = ratatui::init();
+    let mut state = UIState::MainMenu;
+    let mut previous_state = UIState::MainMenu;
+
     // until we see 'q' pressed, continue to render the UI
     loop {
-        terminal.draw(draw)?;
-        if let Event::Key(key) = event::read()? {
-            if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
-                break 
+        // if we've changed state clear terminal and redraw
+        if previous_state != state.clone(){
+            previous_state = state.clone();
+            terminal.clear()?;
+
+            // Render the current state we're in
+            match state {
+                UIState::MainMenu => {
+                    terminal.draw(main_menu_draw)?;
+                }
+                UIState::Running => {
+                    terminal.draw(running_draw)?;
+                }
+                UIState::Stopped => {
+                    break;
+                }
+            }
+        }
+        // else we match the current state and handle events passed in
+        // Allows the following key presses:
+        // 'q' to quit
+        // 's' to start the program
+        else {
+            if let Event::Key(key) = event::read()? {
+                if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
+                    state = UIState::Stopped;
+                }
+            }
+
+            if let Event::Key(key) = event::read()? {
+                if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('s') {
+                    state = UIState::Running;
+                }
             }
         }
     }
 
-    // restore the terminal window state
-    //BUG: for some reason this is not properly resetting the terminal window
+    // Post TUI run clean up by clearing terminal and returning Ok
     terminal.clear()?;
-    ratatui::restore();
     Ok(())
 }
 
+
 /// Calculate the layout of the UI elements.
-///
 /// Returns a tuple of the title area and the main areas.
 fn calculate_layout(area: Rect) -> (Rect, Vec<Vec<Rect>>) {
     let main_layout = Layout::vertical([Constraint::Length(1), Constraint::Min(0)]);
@@ -63,13 +86,34 @@ fn calculate_layout(area: Rect) -> (Rect, Vec<Vec<Rect>>) {
 }
 
 
-/// Handles terminal UI window
-fn draw(frame: &mut Frame) {
-    let (title_area, main_areas) = calculate_layout(frame.size());
+fn running_draw(frame: &mut Frame) {
+    let (title_area, main_areas) = calculate_layout(frame.area());
     render_title(frame, title_area);
-
-    let text = Text::raw("Hello World!");
+    let text = Text::raw("Run time log");
     frame.render_widget(text, frame.area());
+    let widget = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(Color::Blue))
+        .style(Style::default().bg(Color::Black));
+
+    frame.render_widget(widget, main_areas[0][0]);
+    write_to_output(frame, main_areas[1][0], "Running");
+}
+
+/// Handles terminal UI window
+fn main_menu_draw(frame: &mut Frame) {
+    let (title_area, main_areas) = calculate_layout(frame.area());
+    render_title(frame, title_area);
+    let text = Text::raw("Output Window");
+    frame.render_widget(text, frame.area());
+    let widget = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(Color::Blue))
+        .style(Style::default().bg(Color::Black));
+
+    frame.render_widget(widget, main_areas[0][0]);
 }
 
 fn render_title(frame: &mut Frame, area: Rect) {
@@ -82,3 +126,12 @@ fn render_title(frame: &mut Frame, area: Rect) {
     );
 }
 
+fn write_to_output(frame: &mut Frame, area: Rect, text: &str) {
+    frame.render_widget(
+        Paragraph::new(text)
+            .wrap(Wrap { trim: true })
+            .alignment(Alignment::Left)
+            .style(Style::default().fg(Color::White)),
+        area,
+    );
+}

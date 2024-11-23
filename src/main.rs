@@ -1,8 +1,7 @@
-use std::{io, thread, time::Duration};
+use std::io;
 use async_std::task::block_on;
 use data_comparer::ComparisonData;
 use std::time::SystemTime;
-
 mod data_querier;
 mod data_creator;
 mod argument_parser;
@@ -15,7 +14,7 @@ fn main() -> Result<(), io::Error>{
 
     // if help is passed in we want to early return and not do anything else
     // helps prevent people from doing something after pushing the help flag
-    if args.help { 
+    if args.help {
         return Ok(());
     }
 
@@ -24,7 +23,7 @@ fn main() -> Result<(), io::Error>{
         ratatui::restore();
         return result;
     }
-   
+
     run_comparison(&args);
 
     // finally return the result
@@ -33,7 +32,7 @@ fn main() -> Result<(), io::Error>{
 
 fn run_comparison(args: &argument_parser::Arguments) {
     // if the generate data flag is set then generate the data
-    // for the two tables passed in 
+    // for the two tables passed in
     generate_data(args);
 
     // if the clean flag is set then clean up the sqlite databses
@@ -43,7 +42,7 @@ fn run_comparison(args: &argument_parser::Arguments) {
     }
 
     // compare the table data
-    let result = compare_data(args); 
+    let result = compare_data(args);
 
     if !args.output_file_name.is_empty() {
         data_exporter::export_data(&result, &args.output_file_name, &args.output_file_type);
@@ -65,13 +64,13 @@ fn compare_data(args: &argument_parser::Arguments) -> ComparisonData {
 
     if query_2.is_empty()  {
         query_2 = format!("select * from {}", args.table_name_2);
-    } 
-    
+    }
+
     // generate the select statements + return the rows generated from the select statement
     let database_name = "test";
     let mysql_rows_1= block_on(data_querier::query_mysql(&query_1,database_name ));
     let mysql_rows_2 = block_on(data_querier::query_mysql(&query_2, database_name));
-   
+
     let mut now = SystemTime::now();
     block_on(data_querier::mysql_table_to_sqlite_table(&mysql_rows_1, &table_1_data));
     match now.elapsed(){
@@ -94,7 +93,7 @@ fn compare_data(args: &argument_parser::Arguments) -> ComparisonData {
     now = SystemTime::now();
     let result = block_on(data_comparer::compare_sqlite_tables(&table_1_data,&table_2_data, args.create_sqlite_comparison_files, args.in_memory_sqlite));
     print_results(&result);
-    
+
     match now.elapsed(){
         Ok(elapsed) => {
             println!("Time it took to compare both tables: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
@@ -119,7 +118,7 @@ fn generate_data(args: &argument_parser::Arguments){
         return
     };
 
-    let mut now = SystemTime::now(); 
+    let mut now = SystemTime::now();
     block_on(data_creator::create_new_data(args.number_of_rows_to_generate, &args.table_name_1));
     match now.elapsed(){
         Ok(elapsed) => {
