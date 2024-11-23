@@ -13,24 +13,30 @@ use ratatui::{
 enum UIState {
     Running,
     Stopped,
-    MainMenu
+    MainMenu,
+    StartUp
 }
 
 pub(crate) fn run_terminal() -> io::Result<()> {
     // initialize terminal and state of the UI and set the state to main menu
     let mut terminal = ratatui::init();
-    let mut state = UIState::MainMenu;
+    let mut state = UIState::StartUp;
     let mut previous_state = UIState::MainMenu;
 
     // until we see 'q' pressed, continue to render the UI
     loop {
-        // if we've changed state clear terminal and redraw
-        if previous_state != state.clone(){
+        // Handle terminal startup
+        if state == UIState::StartUp {
+            state = UIState::MainMenu;
+            terminal.draw(main_menu_draw)?;
+        }
+        // Handle terminal state change
+        else if previous_state != state.clone() || state == UIState::StartUp {
             previous_state = state.clone();
             terminal.clear()?;
 
-            // Render the current state we're in
             match state {
+                UIState::StartUp |
                 UIState::MainMenu => {
                     terminal.draw(main_menu_draw)?;
                 }
@@ -42,22 +48,45 @@ pub(crate) fn run_terminal() -> io::Result<()> {
                 }
             }
         }
-        // else we match the current state and handle events passed in
-        // Allows the following key presses:
-        // 'q' to quit
-        // 's' to start the program
+        // Else handle new terminal events based on state
         else {
+            // pressing 'q' is a global quit key
+            // and should not continue matching the event
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
                     state = UIState::Stopped;
+                    continue;
                 }
             }
 
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('s') {
-                    state = UIState::Running;
+            // handle events based on state
+            match state {
+                UIState::MainMenu => {
+                    // pressing 's' will start the run
+                    if let Event::Key(key) = event::read()? {
+                        if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('s') {
+                            state = UIState::Running;
+                        }
+                    }
+                }
+                UIState::Running => {
+                    // pressing 's' will stop and take us back to the main menu
+                    terminal.draw(running_draw)?;
+                    if let Event::Key(key) = event::read()? {
+                        if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('s') {
+                            state = UIState::MainMenu;
+                        }
+                    }
+                }
+                UIState::Stopped => {
+                    break;
+                }
+                _ => {
+                    print_unrecognized_key();
+                    break;
                 }
             }
+
         }
     }
 
@@ -66,6 +95,10 @@ pub(crate) fn run_terminal() -> io::Result<()> {
     Ok(())
 }
 
+fn print_unrecognized_key() {
+    //TODO: Add some kind of user response for unkown keys
+    println!("Unrecognized key pressed. Press 'q' to quit");
+}
 
 /// Calculate the layout of the UI elements.
 /// Returns a tuple of the title area and the main areas.
@@ -86,6 +119,8 @@ fn calculate_layout(area: Rect) -> (Rect, Vec<Vec<Rect>>) {
 }
 
 
+/// Handles the termina UI for the running state
+/// of running the current data comparison
 fn running_draw(frame: &mut Frame) {
     let (title_area, main_areas) = calculate_layout(frame.area());
     render_title(frame, title_area);
@@ -101,7 +136,7 @@ fn running_draw(frame: &mut Frame) {
     write_to_output(frame, main_areas[1][0], "Running");
 }
 
-/// Handles terminal UI window
+/// Handles terminal UI window for the main menu
 fn main_menu_draw(frame: &mut Frame) {
     let (title_area, main_areas) = calculate_layout(frame.area());
     render_title(frame, title_area);
@@ -114,8 +149,10 @@ fn main_menu_draw(frame: &mut Frame) {
         .style(Style::default().bg(Color::Black));
 
     frame.render_widget(widget, main_areas[0][0]);
+    write_to_output(frame, main_areas[1][0], "main menu");
 }
 
+/// Renders the title of the terminal UI
 fn render_title(frame: &mut Frame, area: Rect) {
     frame.render_widget(
         Paragraph::new("Data Comparison Tool. Press q to quit")
@@ -126,6 +163,7 @@ fn render_title(frame: &mut Frame, area: Rect) {
     );
 }
 
+/// Writes test to the passed in frame and area
 fn write_to_output(frame: &mut Frame, area: Rect, text: &str) {
     frame.render_widget(
         Paragraph::new(text)
