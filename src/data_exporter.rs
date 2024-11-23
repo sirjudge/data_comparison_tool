@@ -7,7 +7,7 @@ pub(crate) fn export_data(result: &ComparisonData, output_file_name: &str, outpu
     println!("exporting data to file: {}", output_file_name);
 
     match output_file_type {
-        OutputFileType::CSV => {
+        OutputFileType::Csv => {
             if !result.unique_table_1_rows.is_empty() {
                 let unique_table_1_row_file_name = format!("unique_table_1_rows_{}", output_file_name);
                 let mut unique_writer = csv::Writer::from_path(unique_table_1_row_file_name).unwrap();
@@ -15,7 +15,7 @@ pub(crate) fn export_data(result: &ComparisonData, output_file_name: &str, outpu
                     let row = sqlite_row_to_csv(row);
                     unique_writer.write_record(row).unwrap();
                 }
-                
+
                 unique_writer.flush().unwrap();
                 drop(unique_writer);
             }
@@ -30,7 +30,7 @@ pub(crate) fn export_data(result: &ComparisonData, output_file_name: &str, outpu
                 unique_writer2.flush().unwrap();
                 drop(unique_writer2);
             }
-           
+
             if !result.changed_rows.is_empty() {
                 let changed_rows_file_name = format!("changed_rows_{}", output_file_name);
                 let mut changed_writer = csv::Writer::from_path(changed_rows_file_name).unwrap();
@@ -42,7 +42,7 @@ pub(crate) fn export_data(result: &ComparisonData, output_file_name: &str, outpu
                 drop(changed_writer);
             }
         }
-        OutputFileType::JSON => {
+        OutputFileType::Json => {
             panic!("JSON export not implemented yet");
         }
     }

@@ -53,21 +53,21 @@ fn new (
 /// Compare two sqlite tables and return the differences
 pub(crate) async fn compare_sqlite_tables(
     table_data_1: &TableData,
-    table_data_2: &TableData, 
+    table_data_2: &TableData,
     mut create_sqlite_comparison_files: bool,
     in_memory_sqlite: bool
     ) -> ComparisonData {
 
     if in_memory_sqlite && create_sqlite_comparison_files {
         println!("using in memory sqlite for data comparison,
-                 this will be faster but will not save the comparison 
+                 this will be faster but will not save the comparison
                  data to disk, do you want to continue? (yes/no)");
-        // read from std in 
+        // read from std in
         let mut input = String::new();
         std::io::stdin().read_line(&mut input).unwrap();
         //TODO: take in input args auto-yes flag to pass down to here
         if input == "yes\n" || input == "y" {
-            println!("continuing with in memory sqlite"); 
+            println!("continuing with in memory sqlite");
             create_sqlite_comparison_files = false;
         }
         else {
@@ -84,7 +84,7 @@ pub(crate) async fn compare_sqlite_tables(
         get_unique_rows(table_data_2, table_data_1, &sqlite_pool, create_sqlite_comparison_files).await,
         get_changed_rows(table_data_1, table_data_2, &sqlite_pool, create_sqlite_comparison_files).await,
         );
-       
+
     generate_main_comparison_file(table_data_1, table_data_2, &sqlite_pool).await;
     comparison_data
 }
@@ -101,10 +101,10 @@ async fn get_changed_rows(
     let select_query;
     if create_sqlite_comparison_files {
         select_query = format!(
-            "create table changedRows_{} 
-            as 
-            select * 
-            from {} 
+            "create table changedRows_{}
+            as
+            select *
+            from {}
             where exists (
                 select * from {} where {} = {}
                 );
@@ -119,8 +119,8 @@ async fn get_changed_rows(
     else {
         select_query = format!(
             "
-            select * 
-            from {} 
+            select *
+            from {}
             where exists (
                 select * from {} where {} = {}
                 );
@@ -147,9 +147,9 @@ async fn get_changed_rows(
     }
 }
 
-/// take the currently generated in flight files and combine them into one 
+/// take the currently generated in flight files and combine them into one
 /// table that has all the changes as follows
-/// If there is no change then the value remains as follows 
+/// If there is no change then the value remains as follows
 /// |     table_column    |
 /// |     new value       |
 ///
@@ -165,20 +165,22 @@ async fn get_changed_rows(
 /// |     table_column    |
 /// | oldValue(newValue)  |
 async fn generate_main_comparison_file(sqlite_table_1: &TableData, sqlite_table_2: &TableData, sqlite_pool: &SqlitePool) -> Vec<sqlx::sqlite::SqliteRow>{
-    
+    // TODO: Figure out if I actually need this still or not
     // extract timestamp from table name
+    /*
     let table_name_split = sqlite_table_1.table_name.split('_');
     let table_name_vec: Vec<&str> = table_name_split.collect();
     let time_stamp = table_name_vec[1];
+    */
 
     // initialize the main output query
     let mut comparison_query = format!("create table main_out_{} as select ", chrono::offset::Local::now().timestamp());
-   
+
     // iterate through the columns and generate the query to output the differences in tables
     sqlite_table_1.columns.iter().for_each(|column| {
         let column_name = column.name();
         let query_column = format!(
-        "case 
+        "case
             when t1.{} is null and t2.{} is not null then '()'||t2.{}
             when t1.{} is not null and t2.{} is null then t1.{}||'()'
             when t1.{} != t2.{} then t1.{}||'('||t2.{}||')'
@@ -205,7 +207,7 @@ async fn generate_main_comparison_file(sqlite_table_1: &TableData, sqlite_table_
         "
         from {} t1
         left join {} t2 on t1.{} = t2.{}
-        left join unique_{} new on t1.{} = new.{} 
+        left join unique_{} new on t1.{} = new.{}
         ",
         sqlite_table_1.table_name,
         sqlite_table_2.table_name,
@@ -231,7 +233,7 @@ async fn generate_main_comparison_file(sqlite_table_1: &TableData, sqlite_table_
         Err(error) => {
             panic!("error: {:?}", error);
         }
-    } 
+    }
 }
 
 
@@ -248,15 +250,15 @@ async fn get_unique_rows(
 
     let select_query;
     if create_sqlite_comparison_files{
-        // generate select statement and join on the primary key 
+        // generate select statement and join on the primary key
         select_query = format!(
-            "create table unique_{} 
-            as 
-            select * 
-            from {} 
+            "create table unique_{}
+            as
+            select *
+            from {}
             where not exists (
                 select * from {} where {} = {}
-            ); 
+            );
             select * from unique_{}",
             sqlite_table_1.table_name,
             sqlite_table_1.table_name,
@@ -267,15 +269,15 @@ async fn get_unique_rows(
     }
     else {
         select_query = format!(
-            "select * 
-            from {} 
+            "select *
+            from {}
             where not exists (
                 select * from {} where {} = {}
             );",
             sqlite_table_2.table_name,
             sqlite_table_1.table_name,
             sqlite_table_1.primary_key,
-            sqlite_table_2.primary_key); 
+            sqlite_table_2.primary_key);
     }
 
     // execute select query

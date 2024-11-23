@@ -1,8 +1,8 @@
 use chrono::Local;
 
 pub enum OutputFileType {
-    CSV,
-    JSON
+    Csv,
+    Json
 }
 
 /// Struct to hold the arguments passed in from the command line
@@ -57,7 +57,7 @@ pub struct Arguments {
 
 /// prints the urrent flags and their descriptions
 pub(crate) fn print_help(){
-    println!("Help requested! This is a tool to help compare large data sets between mysql and sqlite"); 
+    println!("Help requested! This is a tool to help compare large data sets between mysql and sqlite");
     println!("Usage: data_comparison");
     println!("\t-h : print this help message");
     println!("\t-help : print this help message");
@@ -96,9 +96,9 @@ pub(crate) fn parse_arguments() -> Arguments{
         in_memory_sqlite: false,
         auto_yes: false,
         output_file_name: "".to_string(),
-        output_file_type: OutputFileType::CSV
+        output_file_type: OutputFileType::Csv
     };
-   
+
     // loop over each argument
     // first argument is the name of the program so we can ignore it
     for arg in std::env::args().skip(1){
@@ -136,10 +136,10 @@ pub(crate) fn parse_arguments() -> Arguments{
                     let file_type = file_type.last().unwrap();
                     match file_type {
                         "csv" => {
-                            return_arguments.output_file_type = OutputFileType::CSV;
+                            return_arguments.output_file_type = OutputFileType::Csv;
                         }
                         "json" => {
-                            return_arguments.output_file_type = OutputFileType::JSON;
+                            return_arguments.output_file_type = OutputFileType::Json;
                         }
                         _ => {
                             println!("Unknown file type: {}", file_type);
