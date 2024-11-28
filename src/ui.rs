@@ -1,10 +1,11 @@
 use std::io;
+
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Alignment, Constraint, Layout, Rect},
-    style::{Color, Style, Stylize },
+    style::{Color, Style, Stylize},
     text::Text,
-    widgets::{Block, BorderType, Borders, Paragraph, Wrap},
+    widgets::{Block, BorderType, Borders, Paragraph, Wrap, List, ListDirection},
     Frame,
 };
 
@@ -12,7 +13,6 @@ use ratatui::{
 #[derive(Clone)]
 enum UIState {
     Running,
-    Stopped,
     MainMenu,
     StartUp
 }
@@ -25,7 +25,7 @@ pub(crate) fn run_terminal() -> io::Result<()> {
 
     // until we see 'q' pressed, continue to render the UI
     loop {
-        // Handle terminal startup
+        // Handle terminal startup intiialization
         if state == UIState::StartUp {
             state = UIState::MainMenu;
             terminal.draw(main_menu_draw)?;
@@ -34,7 +34,6 @@ pub(crate) fn run_terminal() -> io::Result<()> {
         else if previous_state != state.clone() || state == UIState::StartUp {
             previous_state = state.clone();
             terminal.clear()?;
-
             match state {
                 UIState::StartUp |
                 UIState::MainMenu => {
@@ -43,50 +42,50 @@ pub(crate) fn run_terminal() -> io::Result<()> {
                 UIState::Running => {
                     terminal.draw(running_draw)?;
                 }
-                UIState::Stopped => {
-                    break;
-                }
             }
         }
         // Else handle new terminal events based on state
         else {
-            // pressing 'q' is a global quit key
-            // and should not continue matching the event
+            // if event is a key press read it
             if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
-                    state = UIState::Stopped;
-                    continue;
-                }
-            }
+                if key.kind == KeyEventKind::Press {
+                    match state {
+                        UIState::MainMenu => {
+                            match key.code {
+                                KeyCode::Char('j') => {
+                                    // TODO: make list go down?
 
-            // handle events based on state
-            match state {
-                UIState::MainMenu => {
-                    // pressing 's' will start the run
-                    if let Event::Key(key) = event::read()? {
-                        if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('s') {
-                            state = UIState::Running;
+                                },
+                                KeyCode::Char('k') => {
+                                    // TODO: make list go up?
+                                },
+                                KeyCode::Char('s') => {
+                                    state = UIState::Running;
+                                },
+                                KeyCode::Char('q') => {
+                                    println!("Quitting");
+                                    break;
+                                }
+                                _ => println!("unrecognized Key pressed: {:?}", key.code),
+                            }
+                        }
+                        UIState::Running => {
+                            // pressing 's' will stop and take us back to the main menu
+                            terminal.draw(running_draw)?;
+                            if let Event::Key(key) = event::read()? {
+                                if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('s') {
+                                    state = UIState::MainMenu;
+                                }
+                            }
+                        }
+                        _ => {
+                            print_unrecognized_key();
+                            break;
                         }
                     }
                 }
-                UIState::Running => {
-                    // pressing 's' will stop and take us back to the main menu
-                    terminal.draw(running_draw)?;
-                    if let Event::Key(key) = event::read()? {
-                        if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('s') {
-                            state = UIState::MainMenu;
-                        }
-                    }
-                }
-                UIState::Stopped => {
-                    break;
-                }
-                _ => {
-                    print_unrecognized_key();
-                    break;
-                }
-            }
 
+            }
         }
     }
 
@@ -118,7 +117,6 @@ fn calculate_layout(area: Rect) -> (Rect, Vec<Vec<Rect>>) {
     (title_area, main_areas)
 }
 
-
 /// Handles the termina UI for the running state
 /// of running the current data comparison
 fn running_draw(frame: &mut Frame) {
@@ -136,6 +134,24 @@ fn running_draw(frame: &mut Frame) {
     write_to_output(frame, main_areas[1][0], "Running");
 }
 
+fn main_menu_draw(frame: &mut Frame) {
+    // init possible items
+    let items = ["Start", "Quit", "View Past Results"];
+
+    // create widget
+    let list = List::new (items)
+        .block(Block::bordered().title("List"))
+        .style(Style::new().white())
+        .highlight_style(Style::new().italic())
+        .highlight_symbol(">>")
+        .repeat_highlight_symbol(true)
+        .direction(ListDirection::TopToBottom);
+
+    // render the list
+    frame.render_widget(list, frame.area());
+}
+
+/*
 /// Handles terminal UI window for the main menu
 fn main_menu_draw(frame: &mut Frame) {
     let (title_area, main_areas) = calculate_layout(frame.area());
@@ -151,6 +167,7 @@ fn main_menu_draw(frame: &mut Frame) {
     frame.render_widget(widget, main_areas[0][0]);
     write_to_output(frame, main_areas[1][0], "main menu");
 }
+*/
 
 /// Renders the title of the terminal UI
 fn render_title(frame: &mut Frame, area: Rect) {
