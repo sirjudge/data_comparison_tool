@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Style, Stylize},
     text::Text,
-    widgets::{Block, BorderType, Borders, Paragraph, Wrap, List, ListDirection},
+    widgets::{Block, BorderType, Borders, Paragraph, Wrap, List, ListDirection, ListState},
     Frame,
 };
 
@@ -28,16 +28,16 @@ pub(crate) fn run_terminal() -> io::Result<()> {
         // Handle terminal startup intiialization
         if state == UIState::StartUp {
             state = UIState::MainMenu;
-            terminal.draw(main_menu_draw)?;
+            terminal.draw(draw_main_menu)?;
         }
         // Handle terminal state change
-        else if previous_state != state.clone() || state == UIState::StartUp {
+        else if previous_state != state {
             previous_state = state.clone();
             terminal.clear()?;
             match state {
                 UIState::StartUp |
                 UIState::MainMenu => {
-                    terminal.draw(main_menu_draw)?;
+                    terminal.draw(draw_main_menu)?;
                 }
                 UIState::Running => {
                     terminal.draw(running_draw)?;
@@ -52,10 +52,11 @@ pub(crate) fn run_terminal() -> io::Result<()> {
                     match state {
                         UIState::MainMenu => {
                             match key.code {
+                                KeyCode::Up |
                                 KeyCode::Char('j') => {
-                                    // TODO: make list go down?
-
+                                    // select widget and move selection up or down
                                 },
+                                KeyCode::Down |
                                 KeyCode::Char('k') => {
                                     // TODO: make list go up?
                                 },
@@ -134,13 +135,13 @@ fn running_draw(frame: &mut Frame) {
     write_to_output(frame, main_areas[1][0], "Running");
 }
 
-fn main_menu_draw(frame: &mut Frame) {
+fn draw_main_menu(frame: &mut Frame) {
     // init possible items
-    let items = ["Start", "Quit", "View Past Results"];
+    let items = ["[S]tart", "[Q]uit", "[V]iew Past Results"];
 
     // create widget
     let list = List::new (items)
-        .block(Block::bordered().title("List"))
+        .block(Block::bordered().title("Menu options"))
         .style(Style::new().white())
         .highlight_style(Style::new().italic())
         .highlight_symbol(">>")
@@ -148,26 +149,9 @@ fn main_menu_draw(frame: &mut Frame) {
         .direction(ListDirection::TopToBottom);
 
     // render the list
-    frame.render_widget(list, frame.area());
+    let mut state = ListState::default();
+    frame.render_stateful_widget(list, frame.area(), &mut state);
 }
-
-/*
-/// Handles terminal UI window for the main menu
-fn main_menu_draw(frame: &mut Frame) {
-    let (title_area, main_areas) = calculate_layout(frame.area());
-    render_title(frame, title_area);
-    let text = Text::raw("Output Window");
-    frame.render_widget(text, frame.area());
-    let widget = Block::default()
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
-        .border_style(Style::default().fg(Color::Blue))
-        .style(Style::default().bg(Color::Black));
-
-    frame.render_widget(widget, main_areas[0][0]);
-    write_to_output(frame, main_areas[1][0], "main menu");
-}
-*/
 
 /// Renders the title of the terminal UI
 fn render_title(frame: &mut Frame, area: Rect) {
