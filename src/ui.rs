@@ -76,8 +76,25 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
                         UIState::Running => {
                             // pressing 's' will stop and take us back to the main menu
                             terminal.draw(running_draw)?;
+                            println!("starting processing");
+                            processor::run_comparison(args);
+                            println!("finished processing");
+
                             if let Event::Key(key) = event::read()? {
-                                if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('s') {
+                                if key.kind == KeyEventKind::Press {
+                                    match key.code {
+                                        KeyCode::Char('q') => {
+                                            break;
+                                        }
+                                        KeyCode::Char('s') => {
+                                            state = UIState::MainMenu;
+                                        }
+                                        _ => {
+                                            println!("Unrecognized key pressed: {:?}", key.code);
+                                            break;
+                                        }
+                                    }
+                                    // && key.code == KeyCode::Char('s') {
                                     state = UIState::MainMenu;
                                 }
                             }
