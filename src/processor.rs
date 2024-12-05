@@ -7,7 +7,7 @@ use crate::data_exporter;
 use crate::argument_parser;
 use crate::data_comparer::ComparisonData;
 
-pub fn run_comparison(args: &argument_parser::Arguments) {
+pub fn run_comparison(args: &argument_parser::Arguments) -> ComparisonData {
     // if the generate data flag is set then generate the data
     // for the two tables passed in
     generate_data(args);
@@ -24,6 +24,8 @@ pub fn run_comparison(args: &argument_parser::Arguments) {
     if !args.output_file_name.is_empty() {
         data_exporter::export_data(&result, &args.output_file_name, &args.output_file_type);
     }
+
+    result
 }
 
 fn compare_data(args: &argument_parser::Arguments) -> ComparisonData {

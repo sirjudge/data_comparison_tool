@@ -1,8 +1,6 @@
 use std::io;
-use crate::argument_parser::Arguments;
 use crate::processor;
 use crate::argument_parser;
-
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Alignment, Constraint, Layout, Rect},
@@ -14,36 +12,61 @@ use ratatui::{
 
 #[derive(PartialEq)]
 #[derive(Clone)]
-enum UIState {
+pub enum UIState {
     Running,
     MainMenu,
     StartUp
 }
 
+/// State management for the UI
+static mut STATE: UIState = UIState::StartUp;
+static mut PREV_STATE: UIState = UIState::StartUp;
+
+pub fn set_state(state: UIState) {
+    unsafe {
+        STATE = state;
+    }
+}
+pub fn get_state() -> UIState {
+    unsafe {
+        STATE.clone()
+    }
+}
+pub fn get_prev_state() -> UIState {
+    unsafe {
+        PREV_STATE.clone()
+    }
+}
+pub fn set_prev_state(state: UIState) {
+    unsafe {
+        PREV_STATE = state;
+    }
+}
+
+
 pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> {
     // initialize terminal and state of the UI and set the state to main menu
     let mut terminal = ratatui::init();
-    let mut state = UIState::StartUp;
     let mut previous_state = UIState::MainMenu;
 
     // until we see 'q' pressed, continue to render the UI
     loop {
         // Handle terminal startup intiialization
-        if state == UIState::StartUp {
-            state = UIState::MainMenu;
+        if get_state() == UIState::StartUp {
+            set_state(UIState::MainMenu);
             terminal.draw(draw_main_menu)?;
         }
         // Handle terminal state change
-        else if previous_state != state {
-            previous_state = state.clone();
+        else if get_prev_state() != get_state() {
+            set_prev_state(get_state());
             terminal.clear()?;
-            match state {
+            match get_state() {
                 UIState::StartUp |
                 UIState::MainMenu => {
                     terminal.draw(draw_main_menu)?;
                 }
                 UIState::Running => {
-                    terminal.draw(running_draw)?;
+                    terminal.draw(draw_running)?;
                 }
             }
         }
@@ -52,7 +75,7 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
             // if event is a key press read it
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
-                    match state {
+                    match get_state() {
                         UIState::MainMenu => {
                             match key.code {
                                 KeyCode::Up |
@@ -64,7 +87,7 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
                                     // TODO: make list go up?
                                 },
                                 KeyCode::Char('s') => {
-                                    state = UIState::Running;
+                                    set_state(UIState::Running);
                                 },
                                 KeyCode::Char('q') => {
                                     println!("Quitting");
@@ -75,29 +98,13 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
                         }
                         UIState::Running => {
                             // pressing 's' will stop and take us back to the main menu
-                            terminal.draw(running_draw)?;
-                            println!("starting processing");
-                            processor::run_comparison(args);
-                            println!("finished processing");
+                            terminal.draw(draw_running)?;
 
-                            if let Event::Key(key) = event::read()? {
-                                if key.kind == KeyEventKind::Press {
-                                    match key.code {
-                                        KeyCode::Char('q') => {
-                                            break;
-                                        }
-                                        KeyCode::Char('s') => {
-                                            state = UIState::MainMenu;
-                                        }
-                                        _ => {
-                                            println!("Unrecognized key pressed: {:?}", key.code);
-                                            break;
-                                        }
-                                    }
-                                    // && key.code == KeyCode::Char('s') {
-                                    state = UIState::MainMenu;
-                                }
-                            }
+                            // todo: once the comparison is done we need
+                            // to display the results to the user
+                            let comparison_data = processor::run_comparison(args);
+                            println!("Comparison ran to completion");
+                            set_state(UIState::MainMenu);
                         }
                         _ => {
                             println!("Unrecognized key pressed: {:?}", key.code);
@@ -113,6 +120,10 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
     // Post TUI run clean up by clearing terminal and returning Ok
     terminal.clear()?;
     Ok(())
+}
+
+fn draw_results_of_comparison(frame: &mut Frame){
+
 }
 
 /// Calculate the layout of the UI elements.
@@ -135,7 +146,7 @@ fn calculate_layout(area: Rect) -> (Rect, Vec<Vec<Rect>>) {
 
 /// Handles the termina UI for the running state
 /// of running the current data comparison
-fn running_draw(frame: &mut Frame) {
+fn draw_running(frame: &mut Frame) {
     let (title_area, main_areas) = calculate_layout(frame.area());
     render_title(frame, title_area);
     let text = Text::raw("Run time log");
