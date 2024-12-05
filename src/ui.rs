@@ -1,4 +1,7 @@
 use std::io;
+use crate::argument_parser::Arguments;
+use crate::processor;
+use crate::argument_parser;
 
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
@@ -17,7 +20,7 @@ enum UIState {
     StartUp
 }
 
-pub(crate) fn run_terminal() -> io::Result<()> {
+pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> {
     // initialize terminal and state of the UI and set the state to main menu
     let mut terminal = ratatui::init();
     let mut state = UIState::StartUp;
@@ -80,7 +83,7 @@ pub(crate) fn run_terminal() -> io::Result<()> {
                             }
                         }
                         _ => {
-                            print_unrecognized_key();
+                            println!("Unrecognized key pressed: {:?}", key.code);
                             break;
                         }
                     }
@@ -93,11 +96,6 @@ pub(crate) fn run_terminal() -> io::Result<()> {
     // Post TUI run clean up by clearing terminal and returning Ok
     terminal.clear()?;
     Ok(())
-}
-
-fn print_unrecognized_key() {
-    //TODO: Add some kind of user response for unkown keys
-    println!("Unrecognized key pressed. Press 'q' to quit");
 }
 
 /// Calculate the layout of the UI elements.

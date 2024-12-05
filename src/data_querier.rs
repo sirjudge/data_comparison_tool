@@ -13,7 +13,7 @@ pub struct TableData {
     pub primary_key: String
 }
 
-/// given a table now select 1 row from the table and extract 
+/// given a table now select 1 row from the table and extract
 /// a list of columns and the primary key
 pub(crate) async fn get_mysql_table_data(table_name: &str) -> TableData {
     let pool = get_mysql_connection("test").await;
@@ -47,7 +47,7 @@ pub(crate) async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
 
     // check if sqlite database exists and create it if it doesn't
     if !sqlx::Sqlite::database_exists(db_url).await.unwrap(){
-        sqlx::Sqlite::create_database(db_url).await.unwrap(); 
+        sqlx::Sqlite::create_database(db_url).await.unwrap();
         println!("database did not previously exist, created sqlite db");
     }
 
@@ -57,7 +57,7 @@ pub(crate) async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
         .connect(db_url).await;
     match result {
         Ok(pool) => {
-            pool 
+            pool
         }
         Err(error) => {
             panic!("unable to connect to sqlite db {}", error);
@@ -81,7 +81,7 @@ pub(crate) async fn get_mysql_connection(database_name: &str) -> Pool<MySql>{
     }
 }
 
-/// open a connection to the mysql databse, executes the query and then 
+/// open a connection to the mysql databse, executes the query and then
 /// returns a vector of the rows returned
 pub(crate) async fn query_mysql(query_string: &str, database: &str) -> Vec<MySqlRow> {
     // open a connection to the test db and execute the query
@@ -89,7 +89,7 @@ pub(crate) async fn query_mysql(query_string: &str, database: &str) -> Vec<MySql
     let rows = sqlx::query(query_string)
         .fetch_all(&pool)
         .await;
-    
+
     // if no errors return and rows isn't empty then return those rows, otherwise panic
     match rows{
         Ok(rows) => {
@@ -109,11 +109,11 @@ pub(crate) async fn query_mysql(query_string: &str, database: &str) -> Vec<MySql
 pub(crate) async fn mysql_table_to_sqlite_table(mysql_rows: &Vec<MySqlRow>, table_data: &TableData) {
     // open a new sqlite connection and execute the create statment
     let sqlite_pool = get_sqlite_connection().await;
-   
-    // if we've built the new sqlite table 
+
+    // if we've built the new sqlite table
     if create_new_sqlite_table(mysql_rows, &sqlite_pool,&table_data.table_name).await {
         println!("created new sqlite table: {}", &table_data.table_name);
-        
+
         // generate the insert query and run it
         let insert_query = create_sqlite_insert_query(mysql_rows, &table_data.table_name);
         let result = sqlx::query(insert_query.as_str())
@@ -129,7 +129,7 @@ pub(crate) async fn mysql_table_to_sqlite_table(mysql_rows: &Vec<MySqlRow>, tabl
     }
     else {
         panic!("unable to create new sqlite table");
-    } 
+    }
 }
 
 // generates a new sqlite table from a passed in mysql row
@@ -137,7 +137,7 @@ async fn create_new_sqlite_table(mysql_rows: &[MySqlRow], sqlite_pool: &Pool<sql
     // extract table information
     // init insert query string
     let mut create_query  = format!("create table if not exists {} (", table_name );
-   
+
     // for each column in the first mysql row generate the column name and type
     for column in mysql_rows[0].columns(){
         create_query.push_str(column.name());
@@ -149,7 +149,7 @@ async fn create_new_sqlite_table(mysql_rows: &[MySqlRow], sqlite_pool: &Pool<sql
     // pop the last char off the string (,) and insert closing parens
     create_query.pop();
     create_query.push(')');
-   
+
     // execute and return the result
     let result = sqlx::query(create_query.as_str())
         .execute(sqlite_pool)
@@ -178,16 +178,16 @@ fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> S
 
     insert_query.pop();
     insert_query.push_str(") VALUES ");
-   
+
     // foreach row in the mysql result set generate the insert query
     for row in mysql_rows {
         let mut value_insert_string = "(".to_string();
-        
+
         // generate the list of values to insert
         for column in row.columns() {
             let column_name = column.name();
             let column_type = column.type_info().name();
-            
+
             // TODO: add support for datetime
             match column_type {
                 "INT" => {
@@ -220,7 +220,7 @@ fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> S
     insert_query
 }
 
-fn mysql_type_to_sqlite_type(mysql_type: &str) -> String 
+fn mysql_type_to_sqlite_type(mysql_type: &str) -> String
 {
     //TODO: add support for datetime
     match mysql_type {
