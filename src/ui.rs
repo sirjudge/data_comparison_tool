@@ -47,17 +47,18 @@ pub fn set_prev_state(state: UIState) {
 pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> {
     // initialize terminal and state of the UI and set the state to main menu
     let mut terminal = ratatui::init();
-    let mut previous_state = UIState::MainMenu;
 
     // until we see 'q' pressed, continue to render the UI
     loop {
-        // Handle terminal startup intiialization
+        // if state is startup, do start up stuff
+        // else Handle terminal if we've changed state
         if get_state() == UIState::StartUp {
             set_state(UIState::MainMenu);
             terminal.draw(draw_main_menu)?;
         }
-        // Handle terminal state change
         else if get_prev_state() != get_state() {
+            // set the previous state to the current state,
+            // clear the terminal, and draw the new state
             set_prev_state(get_state());
             terminal.clear()?;
             match get_state() {
@@ -84,7 +85,7 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
                                 },
                                 KeyCode::Down |
                                 KeyCode::Char('k') => {
-                                    // TODO: make list go up?
+                                    // select widget and move selection up or down
                                 },
                                 KeyCode::Char('s') => {
                                     set_state(UIState::Running);
@@ -120,10 +121,6 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
     // Post TUI run clean up by clearing terminal and returning Ok
     terminal.clear()?;
     Ok(())
-}
-
-fn draw_results_of_comparison(frame: &mut Frame){
-
 }
 
 /// Calculate the layout of the UI elements.
