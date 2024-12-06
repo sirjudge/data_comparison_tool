@@ -6,13 +6,13 @@ pub(crate) async fn create_new_data(num_rows_to_generate: i32, table_name: &str)
     //TODO: eventually should really introduce some kind of JSON schema input
     let pool = get_mysql_connection("test").await;
     let create_new_table_query = format!(
-        "CREATE TABLE IF NOT EXISTS {} 
+        "CREATE TABLE IF NOT EXISTS {}
         (
             id INT NOT NULL AUTO_INCREMENT,
             randomNumber INT NOT NULL,
             secondRandomNumber INT NOT NULL,
             randomString VARCHAR(255) NOT NULL,
-            secondRandomString VARCHAR(255) NOT NULL, 
+            secondRandomString VARCHAR(255) NOT NULL,
             PRIMARY KEY (id)
         )", table_name);
     let result = sqlx::query(&create_new_table_query)
@@ -29,18 +29,18 @@ pub(crate) async fn create_new_data(num_rows_to_generate: i32, table_name: &str)
 
     let mut insert_query =
         format!(
-            "INSERT INTO {} 
-            (randomNumber,secondRandomNumber,randomString,secondRandomString)  
+            "INSERT INTO {}
+            (randomNumber,secondRandomNumber,randomString,secondRandomString)
             VALUES ", table_name);
     for _i in 0..num_rows_to_generate {
         insert_query.push_str(
             &format!(
-                "({},'{}','{}','{}'),", 
+                "({},'{}','{}','{}'),",
                 random_long(500),
                 random_long(500),
                 random_string(25),
                 random_string(25)
-                )); 
+                ));
     }
 
     // remove the last comma from the insert query and run

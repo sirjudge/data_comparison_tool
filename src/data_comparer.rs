@@ -1,55 +1,42 @@
-use sqlx::{Column, SqlitePool};
+use sqlx::{sqlite::SqliteRow, Column, SqlitePool};
 use crate::data_querier::{TableData, get_sqlite_connection};
-use chrono;
-
 
 /// Struct to hold the comparison data between the two tables
 pub struct ComparisonData {
     /// Rows that are unique to the first table and do not exist in the second
     /// table
+
     pub unique_table_1_rows: Vec<sqlx::sqlite::SqliteRow>,
+
     /// Rows that are unique to the second table and do not exist in the first
     /// table
     pub unique_table_2_rows: Vec<sqlx::sqlite::SqliteRow>,
 
     /// Rows that have the same primary key but differ in other columns
     pub changed_rows: Vec<sqlx::sqlite::SqliteRow>,
-
-    /// The table data for the first table
-    pub table_1_data: TableData,
-
-    /// The table data for the second table
-    pub table_2_data: TableData,
 }
 
-/// Constructor for the comparison data struct
-fn new (
-    unique_table_1_data: Vec<sqlx::sqlite::SqliteRow>,
-    unique_table_2_data: Vec<sqlx::sqlite::SqliteRow>,
-    changed_rows_data: Vec<sqlx::sqlite::SqliteRow>,
+impl ComparisonData {
+    fn borrow(&self) -> &ComparisonData {
+        self
+    }
+
+    /// Constructor for the comparison data struct
+    pub fn new (
+        unique_table_1_data: Vec<sqlx::sqlite::SqliteRow>,
+        unique_table_2_data: Vec<sqlx::sqlite::SqliteRow>,
+        changed_rows_data: Vec<sqlx::sqlite::SqliteRow>,
     ) -> ComparisonData {
 
-    // initialize the table data objects
-    let t1_data = TableData {
-        table_name: String::from(""),
-        primary_key: String::from(""),
-        columns: Vec::new(),
-    };
-    let t2_data =  TableData {
-        table_name: String::from(""),
-        primary_key: String::from(""),
-        columns: Vec::new(),
-    };
-
-    // return the new comparison object
-    ComparisonData {
-        unique_table_1_rows: unique_table_1_data,
-        unique_table_2_rows: unique_table_2_data,
-        changed_rows: changed_rows_data,
-        table_1_data: t1_data,
-        table_2_data: t2_data
+        // return the new comparison object
+        ComparisonData {
+            unique_table_1_rows: unique_table_1_data,
+            unique_table_2_rows: unique_table_2_data,
+            changed_rows: changed_rows_data,
+        }
     }
 }
+
 
 /// Compare two sqlite tables and return the differences
 pub(crate) async fn compare_sqlite_tables(
@@ -80,11 +67,11 @@ pub(crate) async fn compare_sqlite_tables(
     // get the sqlite connection, and execute each part of the comparison
     let sqlite_pool = get_sqlite_connection().await;
 
-    let comparison_data = new (
+    let comparison_data = ComparisonData::new (
         get_unique_rows(table_data_1, table_data_2, &sqlite_pool, create_sqlite_comparison_files).await,
         get_unique_rows(table_data_2, table_data_1, &sqlite_pool, create_sqlite_comparison_files).await,
         get_changed_rows(table_data_1, table_data_2, &sqlite_pool, create_sqlite_comparison_files).await,
-        );
+    );
 
     generate_main_comparison_file(table_data_1, table_data_2, &sqlite_pool).await;
     comparison_data
@@ -166,14 +153,6 @@ async fn get_changed_rows(
 /// |     table_column    |
 /// | oldValue(newValue)  |
 async fn generate_main_comparison_file(sqlite_table_1: &TableData, sqlite_table_2: &TableData, sqlite_pool: &SqlitePool) -> Vec<sqlx::sqlite::SqliteRow>{
-    // TODO: Figure out if I actually need this still or not
-    // extract timestamp from table name
-    /*
-    let table_name_split = sqlite_table_1.table_name.split('_');
-    let table_name_vec: Vec<&str> = table_name_split.collect();
-    let time_stamp = table_name_vec[1];
-    */
-
     // initialize the main output query
     let mut comparison_query = format!("create table main_out_{} as select ", chrono::offset::Local::now().timestamp());
 

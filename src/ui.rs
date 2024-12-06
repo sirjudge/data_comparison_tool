@@ -1,4 +1,6 @@
+use std::io::Stdout;
 use std::io;
+use crate::data_comparer::ComparisonData;
 use crate::processor;
 use crate::argument_parser;
 use ratatui::{
@@ -8,6 +10,7 @@ use ratatui::{
     text::Text,
     widgets::{Block, BorderType, Borders, Paragraph, Wrap, List, ListDirection, ListState},
     Frame,
+    prelude::CrosstermBackend,
 };
 
 #[derive(PartialEq)]
@@ -15,12 +18,17 @@ use ratatui::{
 pub enum UIState {
     Running,
     MainMenu,
-    StartUp
+    StartUp,
+    Results,
+    TearDown
 }
 
 /// State management for the UI
+/// I'm aware this may not be the best way to do this
+/// but as a wise sage once said "I'm just a girl trying to do her best"
 static mut STATE: UIState = UIState::StartUp;
 static mut PREV_STATE: UIState = UIState::StartUp;
+static mut COMPARISON_DATA: Option<ComparisonData> = None;
 
 pub fn set_state(state: UIState) {
     unsafe {
@@ -42,13 +50,28 @@ pub fn set_prev_state(state: UIState) {
         PREV_STATE = state;
     }
 }
+pub fn set_comparison_data(data: ComparisonData) {
+    unsafe {
+        COMPARISON_DATA = Some(data);
+    }
+}
 
+pub fn get_comparison_data() -> Option<&'static ComparisonData> {
+    unsafe {
+        match &COMPARISON_DATA {
+            Some(data) => Some(data),
+            None => None
+        }
+    }
+}
 
+/// Initialize the terminal UI, run start up tasks, and then display
+/// the main menu to the user
 pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> {
     // initialize terminal and state of the UI and set the state to main menu
     let mut terminal = ratatui::init();
 
-    // until we see 'q' pressed, continue to render the UI
+    // loop indefinitely until the the user quits
     loop {
         // if state is startup, do start up stuff
         // else Handle terminal if we've changed state
@@ -68,6 +91,14 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
                 }
                 UIState::Running => {
                     terminal.draw(draw_running)?;
+                }
+                UIState::Results => {
+                    terminal.draw(draw_results)?;
+                }
+                UIState::TearDown => {
+                    println!("Tearing down terminal and quitting");
+                    terminal.clear()?;
+                    return Ok(());
                 }
             }
         }
@@ -91,21 +122,28 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
                                     set_state(UIState::Running);
                                 },
                                 KeyCode::Char('q') => {
-                                    println!("Quitting");
+                                    set_state(UIState::TearDown);
                                     break;
                                 }
                                 _ => println!("unrecognized Key pressed: {:?}", key.code),
                             }
                         }
                         UIState::Running => {
-                            // pressing 's' will stop and take us back to the main menu
-                            terminal.draw(draw_running)?;
-
-                            // todo: once the comparison is done we need
-                            // to display the results to the user
-                            let comparison_data = processor::run_comparison(args);
-                            println!("Comparison ran to completion");
-                            set_state(UIState::MainMenu);
+                            // get and print terminal type
+                            println!("Running comparison");
+                            let result = draw_and_render_comparison(&mut terminal, args);
+                            match result {
+                                Ok(comparison_data) => {
+                                    set_comparison_data(comparison_data);
+                                    println!("Comparison complete, displaying results");
+                                    set_state(UIState::Results);
+                                    terminal.draw(draw_results)?;
+                                }
+                                Err(e) => {
+                                    println!("Error running comparison: {:?}", e);
+                                    set_state(UIState::MainMenu);
+                                }
+                            }
                         }
                         _ => {
                             println!("Unrecognized key pressed: {:?}", key.code);
@@ -121,6 +159,39 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
     // Post TUI run clean up by clearing terminal and returning Ok
     terminal.clear()?;
     Ok(())
+}
+
+fn draw_results(frame: &mut Frame) {
+    let (title_area, main_areas) = calculate_layout(frame.area());
+    render_title(frame, title_area);
+    let text = Text::raw("Results");
+    frame.render_widget(text, frame.area());
+    let widget = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(Color::Blue))
+        .style(Style::default().bg(Color::Black));
+
+
+    let comparison_data = get_comparison_data().unwrap();
+    let uniqueTable1RowsString = comparison_data.unique_table_1_rows.len().to_string();
+    let uniqueTable2RowsString = comparison_data.unique_table_2_rows.len().to_string();
+
+    frame.render_widget(widget, main_areas[0][0]);
+    write_to_output(frame, main_areas[1][0], "Results");
+    write_to_output(frame, main_areas[2][0], "unique rows in table 1");
+    write_to_output(frame, main_areas[2][1], &uniqueTable1RowsString);
+    write_to_output(frame, main_areas[3][0], "unique rows in table 2");
+    write_to_output(frame, main_areas[3][1], &uniqueTable2RowsString);
+}
+
+fn draw_and_render_comparison(terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>, args: &argument_parser::Arguments) -> Result<ComparisonData, std::io::Error> {
+    // pressing 's' will stop and take us back to the main menu
+    terminal.draw(draw_running)?;
+    // todo: once the comparison is done we need
+    // to display the results to the user
+    let comparison_data = processor::run_comparison(args);
+    Ok(comparison_data)
 }
 
 /// Calculate the layout of the UI elements.
@@ -158,6 +229,7 @@ fn draw_running(frame: &mut Frame) {
     write_to_output(frame, main_areas[1][0], "Running");
 }
 
+/// Render the main menu of the terminal UI
 fn draw_main_menu(frame: &mut Frame) {
     // init possible items
     let items = ["[S]tart", "[Q]uit", "[V]iew Past Results"];
