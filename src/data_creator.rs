@@ -3,7 +3,8 @@ use crate::data_querier::get_mysql_connection;
 
 /// Create a new table in the mysql database and populate it with random data
 pub(crate) async fn create_new_data(num_rows_to_generate: i32, table_name: &str){
-    //TODO: eventually should really introduce some kind of JSON schema input
+    //TODO: eventually should really introduce some kind of
+
     let pool = get_mysql_connection("test").await;
     let create_new_table_query = format!(
         "CREATE TABLE IF NOT EXISTS {}

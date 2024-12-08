@@ -1,7 +1,19 @@
 use std::borrow::Borrow;
-use sqlx::{ migrate::MigrateDatabase, mysql::{MySqlColumn, MySqlPoolOptions, MySqlRow}, sqlite::SqlitePoolOptions, Column, MySql, Pool, Row, TypeInfo};
-//TODO: add this back in when I add dateTime support
-//use chrono::{Local, DateTime};
+use std::env;
+use sqlx::{
+    migrate::MigrateDatabase,
+    mysql::{
+        MySqlColumn,
+        MySqlPoolOptions,
+        MySqlRow
+    },
+    sqlite::SqlitePoolOptions,
+    Column,
+    MySql,
+    Pool,
+    Row,
+    TypeInfo
+};
 
 /// Struct to hold the table properties to pass over to the sqlite querier
 pub struct TableData {
@@ -44,7 +56,6 @@ pub(crate) async fn get_mysql_table_data(table_name: &str) -> TableData {
 /// open a connection to the sqlite database
 pub(crate) async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
     let db_url = "sqlite://./db.sqlite3";
-
     // check if sqlite database exists and create it if it doesn't
     if !sqlx::Sqlite::database_exists(db_url).await.unwrap(){
         sqlx::Sqlite::create_database(db_url).await.unwrap();
@@ -67,10 +78,15 @@ pub(crate) async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
 
 /// open a connection to the mysql databse
 pub(crate) async fn get_mysql_connection(database_name: &str) -> Pool<MySql>{
-    let db_url = format!("mysql://root:@0.0.0.0:3306/{}", database_name);
+    // TODO: This is the old code commented out (plus an added password in attempts to make it work
+    // with a password)
+    //let db_url = format!("mysql://root:passw0rd@0.0.0.0:3306/{}", database_name);
+
+    // new version that takes variables in
+    let mysql_connection_string = env::var("MYSQL_CONNECTION_STRING").unwrap();
     let result = MySqlPoolOptions::new()
         .acquire_timeout(std::time::Duration::from_secs(5))
-        .connect(db_url.borrow()).await;
+        .connect(mysql_connection_string.borrow()).await;
     match result {
         Ok(pool) => {
             pool
@@ -235,3 +251,4 @@ fn mysql_type_to_sqlite_type(mysql_type: &str) -> String
         }
     }
 }
+

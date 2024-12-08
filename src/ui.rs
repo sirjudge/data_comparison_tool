@@ -1,8 +1,11 @@
-use std::io::Stdout;
-use std::io;
-use crate::data_comparer::ComparisonData;
-use crate::processor;
-use crate::argument_parser;
+// Used to ignore a warning in `get_comparison_data()` to get around
+// some ugly borrowing conflictions between ComparisonData struct and sqlx types
+// not working well together without doing a custom clone and copy implementation
+#[warn(static_mut_refs)]
+
+// Imports
+use std::{io, env, io::Stdout};
+use crate::{data_comparer::ComparisonData,  processor, argument_parser };
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Alignment, Constraint, Layout, Rect},
@@ -58,6 +61,12 @@ pub fn set_comparison_data(data: ComparisonData) {
 
 pub fn get_comparison_data() -> Option<&'static ComparisonData> {
     unsafe {
+        // TODO: the rust-analyzer suggests that we should use addr_or!()
+        // here instead to create a raw pointer
+        // doing that would require changing the signature of this
+        // which then causes the fact that ComparisonData does not have the
+        // clone or copy trait on the sqlx types
+        // so for now we'll just ignore this for now
         match &COMPARISON_DATA {
             Some(data) => Some(data),
             None => None
@@ -83,7 +92,7 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
             // set the previous state to the current state,
             // clear the terminal, and draw the new state
             set_prev_state(get_state());
-            terminal.clear()?;
+            //terminal.clear()?;
             match get_state() {
                 UIState::StartUp |
                 UIState::MainMenu => {
@@ -129,20 +138,25 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
                             }
                         }
                         UIState::Running => {
-                            // get and print terminal type
-                            println!("Running comparison");
                             let result = draw_and_render_comparison(&mut terminal, args);
                             match result {
-                                Ok(comparison_data) => {
-                                    set_comparison_data(comparison_data);
+                                Ok(()) => {
                                     println!("Comparison complete, displaying results");
                                     set_state(UIState::Results);
-                                    terminal.draw(draw_results)?;
                                 }
                                 Err(e) => {
                                     println!("Error running comparison: {:?}", e);
                                     set_state(UIState::MainMenu);
                                 }
+                            }
+                        }
+                        UIState::Results => {
+                            match key.code {
+                                KeyCode::Char('q') => {
+                                    terminal.draw(draw_results)?;
+                                    set_state(UIState::TearDown);
+                                }
+                                _ => println!("Unrecognized key pressed: {:?}", key.code),
                             }
                         }
                         _ => {
@@ -172,26 +186,27 @@ fn draw_results(frame: &mut Frame) {
         .border_style(Style::default().fg(Color::Blue))
         .style(Style::default().bg(Color::Black));
 
-
     let comparison_data = get_comparison_data().unwrap();
-    let uniqueTable1RowsString = comparison_data.unique_table_1_rows.len().to_string();
-    let uniqueTable2RowsString = comparison_data.unique_table_2_rows.len().to_string();
+    let unique_table_1_rows_str = comparison_data.unique_table_1_rows.len().to_string();
+    let unique_table_2_rows_str = comparison_data.unique_table_2_rows.len().to_string();
 
     frame.render_widget(widget, main_areas[0][0]);
     write_to_output(frame, main_areas[1][0], "Results");
     write_to_output(frame, main_areas[2][0], "unique rows in table 1");
-    write_to_output(frame, main_areas[2][1], &uniqueTable1RowsString);
+    write_to_output(frame, main_areas[2][1], &unique_table_1_rows_str);
     write_to_output(frame, main_areas[3][0], "unique rows in table 2");
-    write_to_output(frame, main_areas[3][1], &uniqueTable2RowsString);
+    write_to_output(frame, main_areas[3][1], &unique_table_2_rows_str);
 }
 
-fn draw_and_render_comparison(terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>, args: &argument_parser::Arguments) -> Result<ComparisonData, std::io::Error> {
+fn draw_and_render_comparison(terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>, args: &argument_parser::Arguments) -> Result<(), std::io::Error> {
     // pressing 's' will stop and take us back to the main menu
+    println!("Running comparison");
     terminal.draw(draw_running)?;
-    // todo: once the comparison is done we need
-    // to display the results to the user
     let comparison_data = processor::run_comparison(args);
-    Ok(comparison_data)
+    set_comparison_data(comparison_data);
+    println!("Displaying results");
+    terminal.draw(draw_results)?;
+    Ok(())
 }
 
 /// Calculate the layout of the UI elements.
