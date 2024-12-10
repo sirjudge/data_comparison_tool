@@ -1,29 +1,27 @@
 // Used to ignore a warning in `get_comparison_data()` to get around
 // some ugly borrowing conflictions between ComparisonData struct and sqlx types
 // not working well together without doing a custom clone and copy implementation
-#[warn(static_mut_refs)]
-
-// Imports
-use std::{io, env, io::Stdout};
-use crate::{data_comparer::ComparisonData,  processor, argument_parser };
+use crate::{argument_parser, data_comparer::ComparisonData, processor};
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Alignment, Constraint, Layout, Rect},
+    prelude::CrosstermBackend,
     style::{Color, Style, Stylize},
     text::Text,
-    widgets::{Block, BorderType, Borders, Paragraph, Wrap, List, ListDirection, ListState},
+    widgets::{Block, BorderType, Borders, List, ListDirection, ListState, Paragraph, Wrap},
     Frame,
-    prelude::CrosstermBackend,
 };
+#[warn(static_mut_refs)]
+// Imports
+use std::{env, io, io::Stdout};
 
-#[derive(PartialEq)]
-#[derive(Clone)]
+#[derive(PartialEq, Clone)]
 pub enum UIState {
     Running,
     MainMenu,
     StartUp,
     Results,
-    TearDown
+    TearDown,
 }
 
 /// State management for the UI
@@ -39,14 +37,10 @@ pub fn set_state(state: UIState) {
     }
 }
 pub fn get_state() -> UIState {
-    unsafe {
-        STATE.clone()
-    }
+    unsafe { STATE.clone() }
 }
 pub fn get_prev_state() -> UIState {
-    unsafe {
-        PREV_STATE.clone()
-    }
+    unsafe { PREV_STATE.clone() }
 }
 pub fn set_prev_state(state: UIState) {
     unsafe {
@@ -69,7 +63,7 @@ pub fn get_comparison_data() -> Option<&'static ComparisonData> {
         // so for now we'll just ignore this for now
         match &COMPARISON_DATA {
             Some(data) => Some(data),
-            None => None
+            None => None,
         }
     }
 }
@@ -87,15 +81,13 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
         if get_state() == UIState::StartUp {
             set_state(UIState::MainMenu);
             terminal.draw(draw_main_menu)?;
-        }
-        else if get_prev_state() != get_state() {
+        } else if get_prev_state() != get_state() {
             // set the previous state to the current state,
             // clear the terminal, and draw the new state
             set_prev_state(get_state());
             //terminal.clear()?;
             match get_state() {
-                UIState::StartUp |
-                UIState::MainMenu => {
+                UIState::StartUp | UIState::MainMenu => {
                     terminal.draw(draw_main_menu)?;
                 }
                 UIState::Running => {
@@ -119,17 +111,15 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
                     match get_state() {
                         UIState::MainMenu => {
                             match key.code {
-                                KeyCode::Up |
-                                KeyCode::Char('j') => {
+                                KeyCode::Up | KeyCode::Char('j') => {
                                     // select widget and move selection up or down
-                                },
-                                KeyCode::Down |
-                                KeyCode::Char('k') => {
+                                }
+                                KeyCode::Down | KeyCode::Char('k') => {
                                     // select widget and move selection up or down
-                                },
+                                }
                                 KeyCode::Char('s') => {
                                     set_state(UIState::Running);
-                                },
+                                }
                                 KeyCode::Char('q') => {
                                     set_state(UIState::TearDown);
                                     break;
@@ -150,22 +140,19 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
                                 }
                             }
                         }
-                        UIState::Results => {
-                            match key.code {
-                                KeyCode::Char('q') => {
-                                    terminal.draw(draw_results)?;
-                                    set_state(UIState::TearDown);
-                                }
-                                _ => println!("Unrecognized key pressed: {:?}", key.code),
+                        UIState::Results => match key.code {
+                            KeyCode::Char('q') => {
+                                terminal.draw(draw_results)?;
+                                set_state(UIState::TearDown);
                             }
-                        }
+                            _ => println!("Unrecognized key pressed: {:?}", key.code),
+                        },
                         _ => {
                             println!("Unrecognized key pressed: {:?}", key.code);
                             break;
                         }
                     }
                 }
-
             }
         }
     }
@@ -198,7 +185,10 @@ fn draw_results(frame: &mut Frame) {
     write_to_output(frame, main_areas[3][1], &unique_table_2_rows_str);
 }
 
-fn draw_and_render_comparison(terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>, args: &argument_parser::Arguments) -> Result<(), std::io::Error> {
+fn draw_and_render_comparison(
+    terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>,
+    args: &argument_parser::Arguments,
+) -> Result<(), std::io::Error> {
     // pressing 's' will stop and take us back to the main menu
     println!("Running comparison");
     terminal.draw(draw_running)?;
@@ -250,7 +240,7 @@ fn draw_main_menu(frame: &mut Frame) {
     let items = ["[S]tart", "[Q]uit", "[V]iew Past Results"];
 
     // create widget
-    let list = List::new (items)
+    let list = List::new(items)
         .block(Block::bordered().title("Menu options"))
         .style(Style::new().white())
         .highlight_style(Style::new().italic())

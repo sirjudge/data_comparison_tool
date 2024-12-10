@@ -1,4 +1,3 @@
-use std::borrow::Borrow;
 use std::env;
 use sqlx::{
     migrate::MigrateDatabase,
@@ -80,19 +79,37 @@ pub(crate) async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
 pub(crate) async fn get_mysql_connection(database_name: &str) -> Pool<MySql>{
     // TODO: This is the old code commented out (plus an added password in attempts to make it work
     // with a password)
-    //let db_url = format!("mysql://root:passw0rd@0.0.0.0:3306/{}", database_name);
-
-    // new version that takes variables in
-    let mysql_connection_string = env::var("MYSQL_CONNECTION_STRING").unwrap();
-    let result = MySqlPoolOptions::new()
-        .acquire_timeout(std::time::Duration::from_secs(5))
-        .connect(mysql_connection_string.borrow()).await;
-    match result {
-        Ok(pool) => {
-            pool
+    let mysql_connection_string = env::var("MYSQL_CONNECTION_STRING");
+    match mysql_connection_string {
+        Ok(connection_string) => {
+            let result = MySqlPoolOptions::new()
+                .acquire_timeout(std::time::Duration::from_secs(5))
+                .connect(&connection_string).await;
+            match result {
+                Ok(pool) => {
+                    pool
+                }
+                Err(error) => {
+                    panic!("unable to connect to mysql db {}", error);
+                }
+            }
         }
         Err(error) => {
-            panic!("unable to connect to mysql db {}", error);
+            println!("error connecting to database: {}", error);
+            println!("using default connection isntead");
+            let database_name_override = "ComparisonData";
+            let db_url = format!("mysql://nico:RealPassw0rd@0.0.0.0:3306/{}", database_name_override);
+            let result = MySqlPoolOptions::new()
+                .acquire_timeout(std::time::Duration::from_secs(5))
+                .connect(&db_url).await;
+            match result {
+                Ok(pool) => {
+                    pool
+                }
+                Err(error) => {
+                    panic!("unable to connect to mysql db {}", error);
+                }
+            }
         }
     }
 }

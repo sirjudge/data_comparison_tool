@@ -27,5 +27,10 @@ progress.width = 80    # width of progress bar
 [builds]
 # parallelize build, default:1
 jobs=2
+
+# Set rustdoc to be used during doc build
 rustdoc = "rustdoc"
+
+# Incremental compilation avoids redoing work when you recompile a
+# crate, which will ultimately lead to a much faster edit-compile-debug cycle.
 incremental = true

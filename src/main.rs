@@ -17,7 +17,8 @@ fn main() -> Result<(), io::Error>{
         return Ok(());
     }
 
-    // tui run the comaprison in the terminal else just run the comparison here
+    // tui run the comaprison in the terminal
+    // else just run the comparison here
     if args.tui {
         let result = ui::run_terminal(&args);
         ratatui::restore();
