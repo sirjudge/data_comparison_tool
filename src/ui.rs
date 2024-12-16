@@ -1,6 +1,3 @@
-// Used to ignore a warning in `get_comparison_data()` to get around
-// some ugly borrowing conflictions between ComparisonData struct and sqlx types
-// not working well together without doing a custom clone and copy implementation
 use crate::{argument_parser, data_comparer::ComparisonData, processor};
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
@@ -11,9 +8,8 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, List, ListDirection, ListState, Paragraph, Wrap},
     Frame,
 };
-#[warn(static_mut_refs)]
-// Imports
-use std::{env, io, io::Stdout};
+
+use std::{io, io::Stdout};
 
 #[derive(PartialEq, Clone)]
 pub enum UIState {
@@ -274,3 +270,4 @@ fn write_to_output(frame: &mut Frame, area: Rect, text: &str) {
         area,
     );
 }
+
