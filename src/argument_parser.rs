@@ -6,6 +6,12 @@ pub enum OutputFileType {
     Json
 }
 
+pub enum LogOutput {
+    StdOut,
+    File,
+    Console
+}
+
 /// Struct to hold the arguments passed in from the command line
 pub struct Arguments {
     /// run with terminalUi
@@ -53,7 +59,9 @@ pub struct Arguments {
     pub in_memory_sqlite: bool,
 
     /// flag to auto select yes to all prompts
-    pub auto_yes: bool
+    pub auto_yes: bool,
+
+    pub log_output: LogOutput
 }
 
 /// prints the urrent flags and their descriptions
@@ -99,7 +107,8 @@ impl Arguments {
             in_memory_sqlite: false,
             auto_yes: false,
             output_file_name: "".to_string(),
-            output_file_type: OutputFileType::Csv
+            output_file_type: OutputFileType::Csv,
+            log_output: LogOutput::StdOut
         };
 
         // loop over each argument

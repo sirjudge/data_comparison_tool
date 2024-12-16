@@ -72,6 +72,8 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
 
     // loop indefinitely until the the user quits
     loop {
+        let frame = terminal.get_frame();
+
         // if state is startup, do start up stuff
         // else Handle terminal if we've changed state
         if get_state() == UIState::StartUp {
@@ -138,6 +140,7 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
                         }
                         UIState::Results => match key.code {
                             KeyCode::Char('q') => {
+                                terminal.clear()?;
                                 terminal.draw(draw_results)?;
                                 set_state(UIState::TearDown);
                             }

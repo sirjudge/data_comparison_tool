@@ -1,4 +1,4 @@
-use std::io;
+use std::{borrow::BorrowMut, io};
 
 mod processor;
 mod argument_parser;
@@ -7,6 +7,8 @@ mod data_creator;
 mod data_comparer;
 mod data_exporter;
 mod ui;
+mod log;
+
 
 fn main() -> Result<(), io::Error>{
     let args = argument_parser::Arguments::new();
