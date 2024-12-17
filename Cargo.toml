@@ -26,7 +26,7 @@ progress.width = 80    # width of progress bar
 
 [builds]
 # parallelize build, default:1
-jobs=2
+jobs=4
 
 # Set rustdoc to be used during doc build
 rustdoc = "rustdoc"

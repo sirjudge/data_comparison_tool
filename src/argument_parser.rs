@@ -6,6 +6,7 @@ pub enum OutputFileType {
     Json
 }
 
+#[derive(Clone)]
 pub enum LogOutput {
     StdOut,
     File,

@@ -1,4 +1,8 @@
-use crate::{argument_parser, data_comparer::ComparisonData, processor};
+use crate::{argument_parser,
+    data_comparer::ComparisonData,
+    processor,
+    log::Log
+};
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Alignment, Constraint, Layout, Rect},
@@ -63,7 +67,7 @@ pub fn get_comparison_data() -> Option<&'static ComparisonData> {
     }
 }
 
-fn handle_state(terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>) -> Result<(), std::io::Error> {
+fn handle_state(terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>, log: &Log) -> Result<(), std::io::Error> {
     // if state is startup, do start up stuff
     // else Handle terminal if we've changed state
     if get_state() == UIState::StartUp {
@@ -85,7 +89,7 @@ fn handle_state(terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>) -> R
                 terminal.draw(draw_results)?;
             }
             UIState::TearDown => {
-                println!("Tearing down terminal and quitting");
+                log.info("Tearing down terminal and quitting");
                 terminal.clear()?;
                 return Ok(());
             }
@@ -98,14 +102,15 @@ fn handle_state(terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>) -> R
 
 /// Initialize the terminal UI, run start up tasks, and then display
 /// the main menu to the user
-pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> {
+pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::Result<()> {
     // initialize terminal and state of the UI and set the state to main menu
     let mut terminal = ratatui::init();
+    let _ = log.info("UI started");
 
     // ensure we correctly handle the state
-    match handle_state(&mut terminal) {
+    match handle_state(&mut terminal, log) {
         Ok(()) => {
-            println!("State handled successfully");
+            log.info("State handled successfully");
             loop {
                 let frame = terminal.get_frame();
                 // if event is a key press and it's pressed down
@@ -127,18 +132,22 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
                                         set_state(UIState::TearDown);
                                         break;
                                     }
-                                    _ => println!("unrecognized Key pressed: {:?}", key.code),
+                                    _ => {
+                                        let log_string = format!("unrecognized Key pressed: {:?}", key.code);
+                                        let _ = log.info(&log_string);
+                                    }
                                 }
                             }
                             UIState::Running => {
-                                let result = draw_and_render_comparison(&mut terminal, args);
+                                let result = draw_and_render_comparison(&mut terminal, args, log);
                                 match result {
                                     Ok(()) => {
-                                        println!("Comparison complete, displaying results");
+                                        log.info("Comparison complete, displaying results");
                                         set_state(UIState::Results);
                                     }
                                     Err(e) => {
-                                        println!("Error running comparison: {:?}", e);
+                                        let log_string = format!("Error running comparison: {:?}", e);
+                                        log.info(&log_string);
                                         set_state(UIState::MainMenu);
                                     }
                                 }
@@ -149,10 +158,14 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
                                     terminal.draw(draw_results)?;
                                     set_state(UIState::TearDown);
                                 }
-                                _ => println!("Unrecognized key pressed: {:?}", key.code),
+                                _ => {
+                                    let log_string = format!("unrecognized Key pressed: {:?}", key.code);
+                                    log.info(&log_string);
+                                }
                             },
                             _ => {
-                                println!("Unrecognized key pressed: {:?}", key.code);
+                                let log_string = format!("unrecognized Key pressed: {:?}", key.code);
+                                log.info(&log_string);
                                 break;
                             }
 
@@ -162,9 +175,8 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> 
             }
         }
         Err(e) => {
-            println!("Error handling state: {:?}", e);
-            //TODO: uncomment the following to early retun
-            // for speed of debugging just printing for now
+            let log_string = format!("Error handling state: {:?}", e);
+            log.error(&log_string);
             // return Err(e);
         }
     }
@@ -200,13 +212,14 @@ fn draw_results(frame: &mut Frame) {
 fn draw_and_render_comparison(
     terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>,
     args: &argument_parser::Arguments,
+    log: &Log
 ) -> Result<(), std::io::Error> {
     // pressing 's' will stop and take us back to the main menu
-    println!("Running comparison");
+    let _ = log.info("Running comparison");
     terminal.draw(draw_running)?;
-    let comparison_data = processor::run_comparison(args);
+    let comparison_data = processor::run_comparison(args, log);
     set_comparison_data(comparison_data);
-    println!("Displaying results");
+    let _ = log.info("Displaying results");
     terminal.draw(draw_results)?;
     Ok(())
 }

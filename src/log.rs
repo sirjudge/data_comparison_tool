@@ -6,10 +6,11 @@ use crate::argument_parser::{Arguments, LogOutput};
 
 /// creates a log file and returns the generated log file name
 fn create_log_file() -> Result<String, std::io::Error> {
-    //TODO: This looks real funky at the moment, should refactor this
-    // to have an easier to read name
-    let datetime_string = chrono::Local::now().to_string();
-    let log_file_name = format!("{}_log.txt", datetime_string);
+    let datetime_string =
+        chrono::Local::now().to_string()
+        .replace(" ", "_")
+        .replace(":", "_");
+    let log_file_name = format!("data_comparison_{}.log", datetime_string);
 
     if Path::new(&log_file_name).exists(){
         println!("Log file already exists, please delete or rename the existing log file");
@@ -27,15 +28,17 @@ pub struct Log {
 }
 
 impl Log {
-    pub fn new(args:Arguments) -> Log {
+    pub fn new(args:&Arguments) -> Log {
         let log_file_name = create_log_file().unwrap();
+        let log_type = &args.log_output;
+
         Log {
             log_file_name,
-            log_type: args.log_output
+            log_type: log_type.clone()
         }
     }
 
-    pub fn write(&self, message: &str) -> Result<(), std::io::Error> {
+    pub fn info(&self, message: &str) -> Result<(), std::io::Error> {
         match self.log_type {
             LogOutput::StdOut |
             LogOutput::Console  => {
@@ -44,6 +47,22 @@ impl Log {
             LogOutput::File => {
                 let mut log_file = File::create(&self.log_file_name)?;
                 log_file.write_all(message.as_bytes())?;
+                log_file.flush()?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn error(&self, message: &str) -> Result<(), std::io::Error> {
+        match self.log_type {
+            LogOutput::StdOut |
+            LogOutput::Console  => {
+                eprintln!("{}", message);
+            }
+            LogOutput::File => {
+                let mut log_file = File::create(&self.log_file_name)?;
+                let formatted_message = format!("ERROR: {}", message);
+                log_file.write_all(formatted_message.as_bytes())?;
                 log_file.flush()?;
             }
         }
@@ -76,7 +95,7 @@ pub mod tests{
         args.log_output = LogOutput::File;
         let log = Log::new(args);
         assert!(Path::new(&log.log_file_name).exists());
-        log.write("test").unwrap();
-        assert!(Path::new(&log.log_file_name).exists());
+        log.info("info statement test").unwrap();
+        log.error("error statement test").unwrap();
     }
 }

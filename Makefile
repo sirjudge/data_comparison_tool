@@ -20,11 +20,14 @@ build-debug:
 build-release:
 	cargo build --release
 
+mysql-daemon:
+	docker compose up -d
+
 clean:
 	cargo clean
 	rm -f *.sqlite*
 	rm -f *.csv
-	sudo rm -rf docker/
+	docker compose down
 	rm -f *.txt
 run-mysql:
 	sudo docker compose up

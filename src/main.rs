@@ -12,6 +12,9 @@ mod ui;
 fn main() -> Result<(), io::Error> {
     let args = argument_parser::Arguments::new();
 
+    let log = log::Log::new(&args);
+    let _ = log.info("Starting data comparison");
+
     // if help is passed in we want to early return and not do anything else
     // helps prevent people from doing something after pushing the help flag
     if args.help {
@@ -21,12 +24,12 @@ fn main() -> Result<(), io::Error> {
     // tui run the comparison in the terminal
     // else just run the comparison here
     if args.tui {
-        let result = ui::run_terminal(&args);
+        let result = ui::run_terminal(&args, &log);
         ratatui::restore();
         return result;
     }
     else {
-        processor::run_comparison(&args);
+        processor::run_comparison(&args, &log);
     }
 
     // finally return the result

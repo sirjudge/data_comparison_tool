@@ -8,7 +8,7 @@ use crate::argument_parser;
 use crate::data_comparer::ComparisonData;
 use crate::log::Log;
 
-pub fn run_comparison(args: &argument_parser::Arguments) -> ComparisonData {
+pub fn run_comparison(args: &argument_parser::Arguments, log: &Log) -> ComparisonData {
     // if the generate data flag is set then generate the data
     // for the two tables passed in
     generate_data(args);
