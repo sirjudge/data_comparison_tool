@@ -63,7 +63,7 @@ pub(crate) async fn compare_sqlite_tables(
     }
 
     // get the sqlite connection, and execute each part of the comparison
-    let sqlite_pool = get_sqlite_connection().await;
+    let sqlite_pool = get_sqlite_connection(log).await;
 
     let comparison_data = ComparisonData::new (
         get_unique_rows(table_data_1, table_data_2, &sqlite_pool, create_sqlite_comparison_files).await,

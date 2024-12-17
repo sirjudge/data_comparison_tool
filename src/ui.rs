@@ -1,16 +1,13 @@
-use crate::{
-    argument_parser,
-    data_comparer::ComparisonData,
-    processor,
-    log::Log
-};
+use crate::{argument_parser, data_comparer::ComparisonData, log::Log, processor};
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Alignment, Constraint, Layout, Rect},
     prelude::CrosstermBackend,
     style::{Color, Style, Stylize},
     text::Text,
-    widgets::{Block, BorderType, Borders, List, ListDirection, ListState, Paragraph, Row,Table, Wrap},
+    widgets::{
+        Block, BorderType, Borders, List, ListDirection, ListState, Paragraph, Row, Table, Wrap,
+    },
     Frame,
 };
 use std::{io, io::Stdout};
@@ -24,6 +21,17 @@ pub enum UIState {
     TearDown,
 }
 
+fn get_string_from_state(state: UIState) -> String {
+    match state {
+        UIState::MainMenu => "Main Menu".to_string(),
+        UIState::Running => "Running".to_string(),
+        UIState::Results => "Results".to_string(),
+        UIState::TearDown => "Tear Down".to_string(),
+        UIState::StartUp => "Start Up".to_string(),
+    }
+}
+
+
 /// State management for the UI
 /// I'm aware this may not be the best way to do this
 /// but as a wise sage once said "I'm just a girl trying to do her best"
@@ -31,16 +39,23 @@ static mut STATE: UIState = UIState::StartUp;
 static mut PREV_STATE: UIState = UIState::StartUp;
 static mut COMPARISON_DATA: Option<ComparisonData> = None;
 
-pub fn set_state(state: UIState) {
+pub fn set_state(state: UIState, log: &Log) {
     // set the current state as the previous state and set the current state
     // to whatever is passed in
     unsafe {
-        PREV_STATE = get_state();
+        // log the state change
+        let current_state_string = get_string_from_state(get_state(log));
+        let new_state_string = get_string_from_state(state.clone());
+        let log_message = format!("Setting state to: {:?} from: {:?}",new_state_string,current_state_string);
+        log.info(&log_message);
+
+        // set the states
+        PREV_STATE = get_state(log);
         STATE = state;
     }
 }
 
-pub fn get_state() -> UIState {
+pub fn get_state(log:&Log) -> UIState {
     unsafe {
         STATE.clone()
     }
@@ -67,58 +82,60 @@ pub fn set_comparison_data(data: ComparisonData) {
 pub fn get_comparison_data() -> Option<&'static ComparisonData> {
     unsafe {
         match &COMPARISON_DATA {
-            Some(data) => Some(data),
-            None => None,
+            Some(data) => {
+                Some(data)
+            }
+            None => {
+                None
+            }
         }
     }
 }
 
-fn get_string_from_state(state: UIState) -> String {
-    match state {
-        UIState::MainMenu => "Main Menu".to_string(),
-        UIState::Running => "Running".to_string(),
-        UIState::Results => "Results".to_string(),
-        UIState::TearDown => "Tear Down".to_string(),
-        UIState::StartUp => "Start Up".to_string(),
-    }
-}
-
-fn draw_and_handle_state(terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>, log: &Log, args: &argument_parser::Arguments) -> Result<(), std::io::Error> {
+fn draw_and_handle_state(
+    terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>,
+    log: &Log,
+    args: &argument_parser::Arguments,
+) -> Result<(), std::io::Error> {
     // if state is startup, do start up stuff
     // else Handle terminal if we've changed state
-    if get_state() == UIState::StartUp {
+    if get_state(log) == UIState::StartUp {
         log.info("performing terminal initialization tasks");
-        set_state(UIState::MainMenu);
+        set_state(UIState::MainMenu, log);
         terminal.draw(draw_main_menu)?;
         return Ok(());
     }
 
-    if get_prev_state() == get_state() {
-        let log_message = format!("no state change detected, returning ok. Current state: {}", get_string_from_state(get_state()));
+    if get_prev_state() == get_state(log) {
+        let log_message = format!(
+            "no state change detected, returning ok. Current state: {}",
+            get_string_from_state(get_state(log))
+        );
         log.info(&log_message);
         return Ok(());
     }
 
-    let log_message = format!("State change detected, pev_state:{} current_state:{}", get_string_from_state(get_state()), get_string_from_state(get_prev_state()));
+    let log_message = format!(
+        "State change detected, pev_state:{} current_state:{}",
+        get_string_from_state(get_state(log)),
+        get_string_from_state(get_prev_state())
+    );
     log.info(&log_message);
     // set the previous state to the current state,
     terminal.clear()?;
-    match get_state() {
+    match get_state(log) {
         UIState::StartUp | UIState::MainMenu => {
             log.info("performing terminal initialization tasks");
             terminal.draw(draw_main_menu)?;
         }
         UIState::Running => {
-            let result = draw_and_render_comparison(terminal, args, log);
-            match result {
-                Ok(()) => {
-                    log.info("Comparison ran successfully");
-                    set_state(UIState::Results);
-                }
-                Err(e) => {
-                    log.error(&format!("Error running comparison: {:?}", e));
-                }
-            }
+            // pressing 's' will stop and take us back to the main menu
+            log.info("Running comparison");
+            terminal.draw(draw_running)?;
+
+            let comparison_data = processor::run_comparison(args, log);
+            set_comparison_data(comparison_data);
+            set_state(UIState::Results, log);
         }
         UIState::Results => {
             terminal.draw(draw_results)?;
@@ -133,18 +150,21 @@ fn draw_and_handle_state(terminal: &mut ratatui::Terminal<CrosstermBackend<Stdou
     Ok(())
 }
 
-fn handle_main_menu_keys (key: KeyCode, log: &Log) {
+fn handle_main_menu_keys(key: KeyCode, log: &Log) {
     match key {
         KeyCode::Char('s') => {
-            set_state(UIState::Running);
+            set_state(UIState::Running, log);
             log.info("setting state to running from main menu key press");
         }
         KeyCode::Char('q') => {
-            set_state(UIState::TearDown);
+            set_state(UIState::TearDown, log);
             log.info("setting state to tear down from main menu key press");
         }
         _ => {
-            log.info(&format!("unrecognized main menu selection Key pressed: {:?}", key));
+            log.info(&format!(
+                "unrecognized main menu selection Key pressed: {:?}",
+                key
+            ));
         }
     }
 }
@@ -152,7 +172,7 @@ fn handle_main_menu_keys (key: KeyCode, log: &Log) {
 fn runtime_key_events(key: KeyCode, log: &Log) {
     match key {
         KeyCode::Char('q') => {
-            set_state(UIState::TearDown);
+            set_state(UIState::TearDown, log);
             log.info("setting state to tear down from runtime menu key press");
         }
         _ => {
@@ -164,7 +184,11 @@ fn runtime_key_events(key: KeyCode, log: &Log) {
 fn result_key_events(key: KeyCode, log: &Log) {
     match key {
         KeyCode::Char('q') => {
-            set_state(UIState::TearDown);
+            set_state(UIState::TearDown, log);
+            log.info("setting state to tear down from results menu key press");
+        }
+        KeyCode::Char('q') => {
+            set_state(UIState::MainMenu, log);
             log.info("setting state to tear down from results menu key press");
         }
         _ => {
@@ -184,10 +208,13 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::
         // handle and render the current state and after the state has changed hanlde key events
         match draw_and_handle_state(&mut terminal, log, args) {
             Ok(()) => {
-                log.info(&format!("State handled successfully: {:?}", get_string_from_state(get_state())));
+                log.info(&format!(
+                    "State handled successfully: {:?}",
+                    get_string_from_state(get_state(log))
+                ));
                 if let Event::Key(key) = event::read()? {
                     if key.kind == KeyEventKind::Press {
-                        match get_state() {
+                        match get_state(log) {
                             UIState::MainMenu => {
                                 handle_main_menu_keys(key.code, log);
                             }
@@ -196,11 +223,10 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::
                             }
                             UIState::Results => {
                                 result_key_events(key.code, log);
-                            },
+                            }
                             _ => {
                                 log.warn(&format!("unrecognized Key pressed: {:?}", key.code));
                             }
-
                         }
                     }
                 }
@@ -210,7 +236,7 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::
                 log.error(&log_string);
             }
         }
-        if get_state() == UIState::TearDown {
+        if get_state(log) == UIState::TearDown {
             // if we're still in the tear down state at the end of the loop just break and finish
             // execution
             break;
@@ -222,47 +248,36 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::
     Ok(())
 }
 
+/// handle rendering of the comparison results in a nice little
+/// table
 fn draw_results(frame: &mut Frame) {
-    // get the title area and main area of the terminal layout
-    let (title_area, main_areas) = calculate_layout(frame.area());
-
-    // render the title of the widget
-    render_title(frame, title_area);
-
     // create widget data
     let comparison_data = get_comparison_data().unwrap();
     let unique_table_1_rows_str = comparison_data.unique_table_1_rows.len().to_string();
     let unique_table_2_rows_str = comparison_data.unique_table_2_rows.len().to_string();
+    let changed_rows_str = comparison_data.changed_rows.len().to_string();
+
+    // initialize the rows of the table
     let rows = [
         Row::new(vec!["Results:"]),
         Row::new(vec!["Unique Table 1 rows", &unique_table_1_rows_str]),
         Row::new(vec!["Unique Table 2 rows", &unique_table_2_rows_str]),
+        Row::new(vec!["Changed rows", &changed_rows_str]),
+        Row::new(vec!["Press [q] to exit"]),
+        Row::new(vec!["Press [m] to return to the main menu"]),
     ];
 
-    //TODO: maybe do this smarter? slapped length of column
-    //text to be arbitrary for now but might be able to always set to longest
-    // data point and add a couple extra characters for padding
-    let widths = [Constraint::Length(10), Constraint::Length(10)];
-    let table_widget = Table::new(rows,widths)
-        .block(Block::default())
-        .highlight_symbol(">>")
-        .row_highlight_style(Style::new().on_blue());
+    // set column widths
+    let column_1_width = Constraint::Length(20);
+    let column_2_width = Constraint::Length(20);
+    let widths = [column_1_width, column_2_width];
 
-    frame.render_widget(table_widget, main_areas[0][0]);
-}
+    // generate the table widget
+    let table_widget =
+        Table::new(rows, widths)
+        .block(Block::default());
 
-fn draw_and_render_comparison(
-    terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>,
-    args: &argument_parser::Arguments,
-    log: &Log
-) -> Result<(), std::io::Error> {
-    // pressing 's' will stop and take us back to the main menu
-    log.info("Running comparison");
-    terminal.draw(draw_running)?;
-
-    let comparison_data = processor::run_comparison(args, log);
-    set_comparison_data(comparison_data);
-    Ok(())
+    frame.render_widget(table_widget, frame.area());
 }
 
 /// Calculate the layout of the UI elements.
@@ -340,4 +355,3 @@ fn write_to_output(frame: &mut Frame, area: Rect, text: &str) {
         area,
     );
 }
-

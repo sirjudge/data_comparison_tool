@@ -60,12 +60,12 @@ pub(crate) async fn get_mysql_table_data(table_name: &str, log: &Log) -> TableDa
 }
 
 /// open a connection to the sqlite database
-pub(crate) async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
+pub(crate) async fn get_sqlite_connection(log: &Log) -> Pool<sqlx::Sqlite>{
     let db_url = "sqlite://./db.sqlite3";
     // check if sqlite database exists and create it if it doesn't
     if !sqlx::Sqlite::database_exists(db_url).await.unwrap(){
         sqlx::Sqlite::create_database(db_url).await.unwrap();
-        println!("database did not previously exist, created sqlite db");
+        log.info(&format!("database did not previously exist, created sqlite db"));
     }
 
     // connect to the sqlite database and return the pool
@@ -150,7 +150,7 @@ pub(crate) async fn query_mysql(query_string: &str, database: &str, log: &Log) -
 /// and inserts the rows into the new table
 pub(crate) async fn mysql_table_to_sqlite_table(mysql_rows: &Vec<MySqlRow>, table_data: &TableData, log: &Log) {
     // open a new sqlite connection and execute the create statment
-    let sqlite_pool = get_sqlite_connection().await;
+    let sqlite_pool = get_sqlite_connection(log).await;
 
     // if we've built the new sqlite table
     if create_new_sqlite_table(mysql_rows, &sqlite_pool,&table_data.table_name).await {
