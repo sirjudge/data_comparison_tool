@@ -1,4 +1,4 @@
-use std::{borrow::BorrowMut, io};
+use std::io;
 
 mod processor;
 mod argument_parser;
@@ -9,8 +9,7 @@ mod data_exporter;
 mod ui;
 mod log;
 
-
-fn main() -> Result<(), io::Error>{
+fn main() -> Result<(), io::Error> {
     let args = argument_parser::Arguments::new();
 
     // if help is passed in we want to early return and not do anything else
@@ -19,14 +18,13 @@ fn main() -> Result<(), io::Error>{
         return Ok(());
     }
 
-    // tui run the comaprison in the terminal
+    // tui run the comparison in the terminal
     // else just run the comparison here
     if args.tui {
         let result = ui::run_terminal(&args);
         ratatui::restore();
         return result;
-    }
-    else{
+    } else {
         processor::run_comparison(&args);
     }
 
@@ -34,3 +32,15 @@ fn main() -> Result<(), io::Error>{
     Ok(())
 }
 
+#[cfg(test)]
+pub mod main_tests {
+    use super::*;
+
+    /// a defaultly initialized argument should always pass
+    /// this test
+    #[test]
+    pub fn run_comparison_no_terminal_default_arg() {
+        let arguments = argument_parser::Arguments::new();
+        processor::run_comparison(&arguments);
+    }
+}
