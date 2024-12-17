@@ -148,13 +148,13 @@ pub(crate) async fn query_mysql(query_string: &str, database: &str, log: &Log) -
 
 /// Converts a batch of MySql rows to a sqlite new sqlite table
 /// and inserts the rows into the new table
-pub(crate) async fn mysql_table_to_sqlite_table(mysql_rows: &Vec<MySqlRow>, table_data: &TableData) {
+pub(crate) async fn mysql_table_to_sqlite_table(mysql_rows: &Vec<MySqlRow>, table_data: &TableData, log: &Log) {
     // open a new sqlite connection and execute the create statment
     let sqlite_pool = get_sqlite_connection().await;
 
     // if we've built the new sqlite table
     if create_new_sqlite_table(mysql_rows, &sqlite_pool,&table_data.table_name).await {
-        println!("created new sqlite table: {}", &table_data.table_name);
+        log.info(&format!("created new sqlite table: {}", &table_data.table_name));
 
         // generate the insert query and run it
         let insert_query = create_sqlite_insert_query(mysql_rows, &table_data.table_name);

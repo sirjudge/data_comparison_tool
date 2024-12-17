@@ -1,17 +1,19 @@
 use async_std::task::block_on;
 use std::time::SystemTime;
-use crate::data_creator;
-use crate::data_comparer;
-use crate::data_querier;
-use crate::data_exporter;
-use crate::argument_parser;
-use crate::data_comparer::ComparisonData;
-use crate::log::Log;
+use crate::{
+    data_creator,
+    data_comparer::ComparisonData,
+    data_comparer,
+    log::Log,
+    data_querier,
+    data_exporter,
+    argument_parser,
+};
 
 pub fn run_comparison(args: &argument_parser::Arguments, log: &Log) -> ComparisonData {
     // if the generate data flag is set then generate the data
     // for the two tables passed in
-    generate_data(args, &log);
+    generate_data(args, log);
 
     // if the clean flag is set then clean up the sqlite databses
     if args.clean {
@@ -20,10 +22,10 @@ pub fn run_comparison(args: &argument_parser::Arguments, log: &Log) -> Compariso
     }
 
     // compare the table data
-    let result = compare_data(args, &log);
+    let result = compare_data(args, log);
 
     if !args.output_file_name.is_empty() {
-        data_exporter::export_data(&result, &args.output_file_name, &args.output_file_type, &log);
+        data_exporter::export_data(&result, &args.output_file_name, &args.output_file_type, log);
     }
 
     result
@@ -52,7 +54,7 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
     let mysql_rows_2 = block_on(data_querier::query_mysql(&query_2, database_name, log));
 
     let mut now = SystemTime::now();
-    block_on(data_querier::mysql_table_to_sqlite_table(&mysql_rows_1, &table_1_data));
+    block_on(data_querier::mysql_table_to_sqlite_table(&mysql_rows_1, &table_1_data, log));
     match now.elapsed(){
         Ok(elapsed) => {
             let log_message = format!("Time it took to migrate data to sqlite for table 1: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
@@ -65,7 +67,7 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
     }
 
     now = SystemTime::now();
-    block_on(data_querier::mysql_table_to_sqlite_table(&mysql_rows_2, &table_2_data));
+    block_on(data_querier::mysql_table_to_sqlite_table(&mysql_rows_2, &table_2_data, log));
     match now.elapsed(){
         Ok(elapsed) => {
             let log_message = format!("Time it took to migrate data to sqlite for table 2: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
@@ -112,9 +114,10 @@ fn generate_data(args: &argument_parser::Arguments, log: &Log){
         }
     }
 
-    println!("starting second data generation");
+    log.info("starting second data generation");
     now = SystemTime::now();
-    block_on(data_creator::create_new_data(args.number_of_rows_to_generate, &args.table_name_2, &log));
+
+    block_on(data_creator::create_new_data(args.number_of_rows_to_generate, &args.table_name_2, log));
     match now.elapsed(){
         Ok(elapsed) => {
             let log_message = format!("Time it took to create 2nd table: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());

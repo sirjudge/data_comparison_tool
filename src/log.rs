@@ -1,11 +1,12 @@
-use std::fs::{File, OpenOptions};
-use std::io::Write;
-use std::path::Path;
-
+use std::{
+    fs::{File, OpenOptions},
+    io::{Write,Error},
+    path::Path
+};
 use crate::argument_parser::{Arguments, LogOutput};
 
 /// creates a log file and returns the generated log file name
-fn create_log_file() -> Result<String, std::io::Error> {
+fn create_log_file() -> Result<String, Error> {
     let datetime_string =
         chrono::Local::now().to_string()
         .replace(" ", "_")
@@ -90,6 +91,7 @@ impl Log {
             }
         }
     }
+
     pub fn error(&self, message: &str) {
         match self.log_type {
             LogOutput::StdOut |
@@ -122,14 +124,24 @@ pub mod tests{
         }
     }
 
+    #[test]
+    fn init_console_log_and_write(){
+        let mut args = Arguments::new();
+        args.log_output = LogOutput::Console;
+        let log = Log::new(&args);
+        log.info("info statement test");
+        log.warn("info statement test");
+        log.error("error statement tunwrap();est");
+    }
 
     #[test]
-    fn init_file_log_and_(){
+    fn init_file_log_and_write(){
         let mut args = Arguments::new();
         args.log_output = LogOutput::File;
         let log = Log::new(&args);
         assert!(Path::new(&log.log_file_name).exists());
         log.info("info statement test");
+        log.warn("info statement test");
         log.error("error statement tunwrap();est");
     }
 }
