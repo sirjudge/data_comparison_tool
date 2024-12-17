@@ -1,4 +1,5 @@
 use std::env;
+use crate::log::Log;
 use sqlx::{
     migrate::MigrateDatabase,
     mysql::{
@@ -26,8 +27,14 @@ pub struct TableData {
 
 /// given a table now select 1 row from the table and extract
 /// a list of columns and the primary key
-pub(crate) async fn get_mysql_table_data(table_name: &str) -> TableData {
-    let pool = get_mysql_connection("test").await;
+pub(crate) async fn get_mysql_table_data(table_name: &str, log: &Log) -> TableData {
+    //BUG: this needs to be handled better and I think is maybe causing an issue
+    // because of the rename of the main database in mysql table
+    // maybe take in env variable?
+    // This is hardcoded for now to resolve build first and should be
+    // handled better
+    //Original:let pool = get_mysql_connection("test").await;
+    let pool = get_mysql_connection("ComparisonData", log).await;
     let result = sqlx::query(&format!("select * from {} limit 1", table_name))
         .fetch_one(&pool)
         .await;
@@ -76,7 +83,7 @@ pub(crate) async fn get_sqlite_connection() -> Pool<sqlx::Sqlite>{
 }
 
 /// open a connection to the mysql databse
-pub(crate) async fn get_mysql_connection(database_name: &str) -> Pool<MySql>{
+pub(crate) async fn get_mysql_connection(database_name: &str, log: &Log) -> Pool<MySql> {
     // TODO: This is the old code commented out (plus an added password in attempts to make it work
     // with a password)
     let mysql_connection_string = env::var("MYSQL_CONNECTION_STRING");
@@ -87,6 +94,7 @@ pub(crate) async fn get_mysql_connection(database_name: &str) -> Pool<MySql>{
                 .connect(&connection_string).await;
             match result {
                 Ok(pool) => {
+                    log.info(&format!("connected to mysql database: {}", database_name));
                     pool
                 }
                 Err(error) => {
@@ -95,15 +103,16 @@ pub(crate) async fn get_mysql_connection(database_name: &str) -> Pool<MySql>{
             }
         }
         Err(error) => {
-            println!("error connecting to database: {}", error);
-            println!("using default connection isntead");
+            log.info(&format!("error connecting to database: {}", error));
             let database_name_override = "ComparisonData";
             let db_url = format!("mysql://nico:RealPassw0rd@0.0.0.0:3306/{}", database_name_override);
+            log.info(&format!("using default connection instead"));
             let result = MySqlPoolOptions::new()
                 .acquire_timeout(std::time::Duration::from_secs(5))
                 .connect(&db_url).await;
             match result {
                 Ok(pool) => {
+                    log.info(&format!("connected to mysql database pool: {}", database_name));
                     pool
                 }
                 Err(error) => {
@@ -116,9 +125,9 @@ pub(crate) async fn get_mysql_connection(database_name: &str) -> Pool<MySql>{
 
 /// open a connection to the mysql databse, executes the query and then
 /// returns a vector of the rows returned
-pub(crate) async fn query_mysql(query_string: &str, database: &str) -> Vec<MySqlRow> {
+pub(crate) async fn query_mysql(query_string: &str, database: &str, log: &Log) -> Vec<MySqlRow> {
     // open a connection to the test db and execute the query
-    let pool = get_mysql_connection(database).await;
+    let pool = get_mysql_connection(database, log).await;
     let rows = sqlx::query(query_string)
         .fetch_all(&pool)
         .await;

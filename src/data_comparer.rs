@@ -1,5 +1,6 @@
 use sqlx::{Column, SqlitePool};
 use crate::data_querier::{TableData, get_sqlite_connection};
+use crate::log::Log;
 
 /// Struct to hold the comparison data between the two tables
 pub struct ComparisonData {
@@ -38,7 +39,8 @@ pub(crate) async fn compare_sqlite_tables(
     table_data_1: &TableData,
     table_data_2: &TableData,
     mut create_sqlite_comparison_files: bool,
-    in_memory_sqlite: bool
+    in_memory_sqlite: bool,
+    log: &Log
     ) -> ComparisonData {
 
     if in_memory_sqlite && create_sqlite_comparison_files {
@@ -68,7 +70,7 @@ pub(crate) async fn compare_sqlite_tables(
         get_changed_rows(table_data_1, table_data_2, &sqlite_pool, create_sqlite_comparison_files).await,
     );
 
-    generate_main_comparison_file(table_data_1, table_data_2, &sqlite_pool).await;
+    generate_main_comparison_file(table_data_1, table_data_2, &sqlite_pool, log).await;
     comparison_data
 }
 
@@ -147,7 +149,7 @@ async fn get_changed_rows(
 /// If there is a value in table 1 and table 2 but they are different it'll display as follows
 /// |     table_column    |
 /// | oldValue(newValue)  |
-async fn generate_main_comparison_file(sqlite_table_1: &TableData, sqlite_table_2: &TableData, sqlite_pool: &SqlitePool) -> Vec<sqlx::sqlite::SqliteRow>{
+async fn generate_main_comparison_file(sqlite_table_1: &TableData, sqlite_table_2: &TableData, sqlite_pool: &SqlitePool, log: &Log) -> Vec<sqlx::sqlite::SqliteRow>{
     // initialize the main output query
     let mut comparison_query = format!("create table main_out_{} as select ", chrono::offset::Local::now().timestamp());
 
@@ -194,7 +196,7 @@ async fn generate_main_comparison_file(sqlite_table_1: &TableData, sqlite_table_
         );
     comparison_query.push_str(&changed_rows_join);
 
-    println!("comparison query: {}", comparison_query);
+    log.info(&format!("comparison query: {}", comparison_query));
 
     // execute query and return the results
     let rows = sqlx::query(comparison_query.as_str())

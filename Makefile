@@ -26,10 +26,13 @@ docker-build:
 clean-docker:
 	docker compose down
 
-clean-files:
+clean:
 	cargo clean
 	rm -f *.sqlite*
 	rm -f *.csv
+	rm -f *.log
+
+clean-logs:
 	rm -f *.log
 
 profile-release-build:

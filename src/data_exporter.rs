@@ -1,10 +1,11 @@
 use crate::data_comparer::ComparisonData;
 use crate::argument_parser::OutputFileType;
+use crate::log::Log;
 use sqlx::{ Row, Column  };
 
-pub(crate) fn export_data(result: &ComparisonData, output_file_name: &str, output_file_type: &OutputFileType){
+pub(crate) fn export_data(result: &ComparisonData, output_file_name: &str, output_file_type: &OutputFileType, log: &Log) {
 
-    println!("exporting data to file: {}", output_file_name);
+    log.info(&format!("exporting data to file: {}", output_file_name));
 
     match output_file_type {
         OutputFileType::Csv => {
