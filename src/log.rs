@@ -38,35 +38,55 @@ impl Log {
         }
     }
 
-    pub fn info(&self, message: &str) -> Result<(), std::io::Error> {
+    pub fn info(&self, message: &str) {
         match self.log_type {
             LogOutput::StdOut |
             LogOutput::Console  => {
                 println!("{}", message);
             }
             LogOutput::File => {
-                let mut log_file = File::create(&self.log_file_name)?;
-                log_file.write_all(message.as_bytes())?;
-                log_file.flush()?;
+                let mut log_file = File::create(&self.log_file_name).unwrap();
+                match log_file.write_all(message.as_bytes()){
+                    Ok(_) => {
+                        match log_file.flush() {
+                            Ok(_) => {}
+                            Err(e) => {
+                                panic!("Error flushing log file: {}", e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        panic!("Error writing to log file: {}", e);
+                    }
+                }
             }
         }
-        Ok(())
     }
 
-    pub fn error(&self, message: &str) -> Result<(), std::io::Error> {
+    pub fn error(&self, message: &str) {
         match self.log_type {
             LogOutput::StdOut |
             LogOutput::Console  => {
                 eprintln!("{}", message);
             }
             LogOutput::File => {
-                let mut log_file = File::create(&self.log_file_name)?;
+                let mut log_file = File::create(&self.log_file_name).unwrap();
                 let formatted_message = format!("ERROR: {}", message);
-                log_file.write_all(formatted_message.as_bytes())?;
-                log_file.flush()?;
+                match log_file.write_all(formatted_message.as_bytes()) {
+                    Ok(_) => {
+                        match log_file.flush() {
+                            Ok(_) => {}
+                            Err(e) => {
+                                panic!("Error flushing log file: {}", e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        panic!("Error writing to log file: {}", e);
+                    }
+                }
             }
         }
-        Ok(())
     }
 }
 
@@ -80,7 +100,7 @@ pub mod tests{
         let log_file_name_result = create_log_file();
         match log_file_name_result {
             Ok(log_file_name) => {
-                assert_eq!(log_file_name.contains("log.txt"), true);
+                assert!(Path::new(&log_file_name).exists());
             }
             Err(e) => {
                 panic!("Error creating log file: {}", e);
@@ -95,7 +115,7 @@ pub mod tests{
         args.log_output = LogOutput::File;
         let log = Log::new(&args);
         assert!(Path::new(&log.log_file_name).exists());
-        log.info("info statement test").unwrap();
-        log.error("error statement test").unwrap();
+        log.info("info statement test");
+        log.error("error statement tunwrap();est");
     }
 }
