@@ -93,7 +93,7 @@ pub mod tests{
     fn init_file_log_and_(){
         let mut args = Arguments::new();
         args.log_output = LogOutput::File;
-        let log = Log::new(args);
+        let log = Log::new(&args);
         assert!(Path::new(&log.log_file_name).exists());
         log.info("info statement test").unwrap();
         log.error("error statement test").unwrap();

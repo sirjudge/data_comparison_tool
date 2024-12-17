@@ -30,5 +30,5 @@ clean-files:
 	cargo clean
 	rm -f *.sqlite*
 	rm -f *.csv
-	rm -f *.txt
+	rm -f *.log
 

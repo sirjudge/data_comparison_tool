@@ -45,6 +45,7 @@ pub mod main_tests {
     #[test]
     pub fn run_comparison_no_terminal_default_arg() {
         let arguments = argument_parser::Arguments::new();
-        processor::run_comparison(&arguments);
+        let log = log::Log::new(&arguments);
+        processor::run_comparison(&arguments, &log);
     }
 }
