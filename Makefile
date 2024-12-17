@@ -32,3 +32,6 @@ clean-files:
 	rm -f *.csv
 	rm -f *.log
 
+profile-release-build:
+	cargo build --release --timings
+	xdg-open target/cargo-timings/cargo-timing*
