@@ -1,11 +1,9 @@
-use sqlx::{sqlite::SqliteRow, Column, SqlitePool};
+use sqlx::{Column, SqlitePool};
 use crate::data_querier::{TableData, get_sqlite_connection};
 
 /// Struct to hold the comparison data between the two tables
 pub struct ComparisonData {
     /// Rows that are unique to the first table and do not exist in the second
-    /// table
-
     pub unique_table_1_rows: Vec<sqlx::sqlite::SqliteRow>,
 
     /// Rows that are unique to the second table and do not exist in the first
@@ -17,9 +15,6 @@ pub struct ComparisonData {
 }
 
 impl ComparisonData {
-    fn borrow(&self) -> &ComparisonData {
-        self
-    }
 
     /// Constructor for the comparison data struct
     pub fn new (

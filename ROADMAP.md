@@ -17,6 +17,7 @@ the user a visual representation of the work being done.
 ## Update logging output
 - Need to standardize the programs logging to a single struct
 - The base exists but due to needing the program args which is not archiectured to derive Clone or Copy and thus can not be passed in the code in it's current state
+- also should add more proper  support for logging to a  more appropriate file location. This should should be handled by OS with linux support initally and windows support later
 ## Improve ease of configuration
 - Some of the application flags can be grouped into smaller structs and passed more efficiently. The Arguments struct found in argument_parser.rs should be refactored to clean that up and modularize whatever makes sense (probably at least some of the input and output settings).
 - this will allow greater ease of maintenance for supporting .toml configurations

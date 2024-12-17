@@ -1,13 +1,13 @@
 use std::io;
 
-mod processor;
 mod argument_parser;
-mod data_querier;
-mod data_creator;
 mod data_comparer;
+mod data_creator;
 mod data_exporter;
-mod ui;
+mod data_querier;
 mod log;
+mod processor;
+mod ui;
 
 fn main() -> Result<(), io::Error> {
     let args = argument_parser::Arguments::new();
@@ -24,7 +24,8 @@ fn main() -> Result<(), io::Error> {
         let result = ui::run_terminal(&args);
         ratatui::restore();
         return result;
-    } else {
+    }
+    else {
         processor::run_comparison(&args);
     }
 

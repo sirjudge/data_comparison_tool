@@ -25,7 +25,7 @@ clean:
 	rm -f *.sqlite*
 	rm -f *.csv
 	sudo rm -rf docker/
-
+	rm -f *.txt
 run-mysql:
 	sudo docker compose up
 
