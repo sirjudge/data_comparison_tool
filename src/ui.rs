@@ -8,7 +8,6 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, List, ListDirection, ListState, Paragraph, Wrap},
     Frame,
 };
-
 use std::{io, io::Stdout};
 
 #[derive(PartialEq, Clone)]
@@ -64,95 +63,109 @@ pub fn get_comparison_data() -> Option<&'static ComparisonData> {
     }
 }
 
+fn handle_state(terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>) -> Result<(), std::io::Error> {
+    // if state is startup, do start up stuff
+    // else Handle terminal if we've changed state
+    if get_state() == UIState::StartUp {
+        set_state(UIState::MainMenu);
+        terminal.draw(draw_main_menu)?;
+    } else if get_prev_state() != get_state() {
+        // set the previous state to the current state,
+        // clear the terminal, and draw the new state
+        set_prev_state(get_state());
+        //terminal.clear()?;
+        match get_state() {
+            UIState::StartUp | UIState::MainMenu => {
+                terminal.draw(draw_main_menu)?;
+            }
+            UIState::Running => {
+                terminal.draw(draw_running)?;
+            }
+            UIState::Results => {
+                terminal.draw(draw_results)?;
+            }
+            UIState::TearDown => {
+                println!("Tearing down terminal and quitting");
+                terminal.clear()?;
+                return Ok(());
+            }
+        }
+    }
+
+    Ok(())
+}
+
+
 /// Initialize the terminal UI, run start up tasks, and then display
 /// the main menu to the user
 pub(crate) fn run_terminal(args: &argument_parser::Arguments) -> io::Result<()> {
     // initialize terminal and state of the UI and set the state to main menu
     let mut terminal = ratatui::init();
 
-    // loop indefinitely until the the user quits
-    loop {
-        let frame = terminal.get_frame();
-
-        // if state is startup, do start up stuff
-        // else Handle terminal if we've changed state
-        if get_state() == UIState::StartUp {
-            set_state(UIState::MainMenu);
-            terminal.draw(draw_main_menu)?;
-        } else if get_prev_state() != get_state() {
-            // set the previous state to the current state,
-            // clear the terminal, and draw the new state
-            set_prev_state(get_state());
-            //terminal.clear()?;
-            match get_state() {
-                UIState::StartUp | UIState::MainMenu => {
-                    terminal.draw(draw_main_menu)?;
-                }
-                UIState::Running => {
-                    terminal.draw(draw_running)?;
-                }
-                UIState::Results => {
-                    terminal.draw(draw_results)?;
-                }
-                UIState::TearDown => {
-                    println!("Tearing down terminal and quitting");
-                    terminal.clear()?;
-                    return Ok(());
-                }
-            }
-        }
-        // Else handle new terminal events based on state
-        else {
-            // if event is a key press read it
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    match get_state() {
-                        UIState::MainMenu => {
-                            match key.code {
-                                KeyCode::Up | KeyCode::Char('j') => {
-                                    // select widget and move selection up or down
+    // ensure we correctly handle the state
+    match handle_state(&mut terminal) {
+        Ok(()) => {
+            println!("State handled successfully");
+            loop {
+                let frame = terminal.get_frame();
+                // if event is a key press and it's pressed down
+                if let Event::Key(key) = event::read()? {
+                    if key.kind == KeyEventKind::Press {
+                        match get_state() {
+                            UIState::MainMenu => {
+                                match key.code {
+                                    KeyCode::Up | KeyCode::Char('j') => {
+                                        // select widget and move selection up or down
+                                    }
+                                    KeyCode::Down | KeyCode::Char('k') => {
+                                        // select widget and move selection up or down
+                                    }
+                                    KeyCode::Char('s') => {
+                                        set_state(UIState::Running);
+                                    }
+                                    KeyCode::Char('q') => {
+                                        set_state(UIState::TearDown);
+                                        break;
+                                    }
+                                    _ => println!("unrecognized Key pressed: {:?}", key.code),
                                 }
-                                KeyCode::Down | KeyCode::Char('k') => {
-                                    // select widget and move selection up or down
+                            }
+                            UIState::Running => {
+                                let result = draw_and_render_comparison(&mut terminal, args);
+                                match result {
+                                    Ok(()) => {
+                                        println!("Comparison complete, displaying results");
+                                        set_state(UIState::Results);
+                                    }
+                                    Err(e) => {
+                                        println!("Error running comparison: {:?}", e);
+                                        set_state(UIState::MainMenu);
+                                    }
                                 }
-                                KeyCode::Char('s') => {
-                                    set_state(UIState::Running);
-                                }
+                            }
+                            UIState::Results => match key.code {
                                 KeyCode::Char('q') => {
+                                    terminal.clear()?;
+                                    terminal.draw(draw_results)?;
                                     set_state(UIState::TearDown);
-                                    break;
                                 }
-                                _ => println!("unrecognized Key pressed: {:?}", key.code),
+                                _ => println!("Unrecognized key pressed: {:?}", key.code),
+                            },
+                            _ => {
+                                println!("Unrecognized key pressed: {:?}", key.code);
+                                break;
                             }
-                        }
-                        UIState::Running => {
-                            let result = draw_and_render_comparison(&mut terminal, args);
-                            match result {
-                                Ok(()) => {
-                                    println!("Comparison complete, displaying results");
-                                    set_state(UIState::Results);
-                                }
-                                Err(e) => {
-                                    println!("Error running comparison: {:?}", e);
-                                    set_state(UIState::MainMenu);
-                                }
-                            }
-                        }
-                        UIState::Results => match key.code {
-                            KeyCode::Char('q') => {
-                                terminal.clear()?;
-                                terminal.draw(draw_results)?;
-                                set_state(UIState::TearDown);
-                            }
-                            _ => println!("Unrecognized key pressed: {:?}", key.code),
-                        },
-                        _ => {
-                            println!("Unrecognized key pressed: {:?}", key.code);
-                            break;
+
                         }
                     }
                 }
             }
+        }
+        Err(e) => {
+            println!("Error handling state: {:?}", e);
+            //TODO: uncomment the following to early retun
+            // for speed of debugging just printing for now
+            // return Err(e);
         }
     }
 
