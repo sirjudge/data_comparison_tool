@@ -10,10 +10,9 @@ mod processor;
 mod ui;
 
 fn main() -> Result<(), io::Error> {
-    let args = argument_parser::Arguments::new();
 
+    let args = argument_parser::Arguments::new();
     let log = log::Log::new(&args);
-    log.info("Starting data comparison");
 
     // if help is passed in we want to early return and not do anything else
     // helps prevent people from doing something after pushing the help flag

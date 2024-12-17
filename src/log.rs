@@ -30,7 +30,6 @@ pub struct Log {
 impl Log {
     pub fn new(args:&Arguments) -> Log {
         let log_file_name = create_log_file().unwrap();
-        //TODO: eventually should fix this
         let _log_type = &args.log_output;
         Log {
             log_file_name,
@@ -38,72 +37,68 @@ impl Log {
         }
     }
 
+    fn open_file(&self) -> File {
+        if Path::new(&self.log_file_name).exists() {
+                OpenOptions::new()
+                .append(true)
+                .open(&self.log_file_name)
+                .unwrap()
+        }
+        else {
+                File::create(&self.log_file_name).unwrap()
+        }
+    }
+
+    fn append_to_file(&self,log_message: &str, log_file: &mut File) {
+        match log_file.write_all(log_message.as_bytes()) {
+            Ok(_) => {
+                match log_file.flush() {
+                    Ok(_) => {}
+                    Err(e) => {
+                        panic!("Error flushing log file: {}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                panic!("Error writing to log file: {}", e);
+            }
+        }
+
+    }
+
     pub fn info(&self, message: &str) {
         match self.log_type {
-            LogOutput::StdOut |
-                LogOutput::Console  => {
-                    println!("{}", message);
-                }
+            LogOutput::StdOut | LogOutput::Console  => {
+                println!("<INFO>{}", message);
+            }
             LogOutput::File => {
-                let mut log_file: File;
-                if Path::new(&self.log_file_name).exists() {
-                    log_file = OpenOptions::new()
-                        .append(true)
-                        .open(&self.log_file_name)
-                        .unwrap();
-                }
-                else {
-                    log_file = File::create(&self.log_file_name).unwrap();
-                }
-
-                match log_file.write_all(message.as_bytes()){
-                    Ok(_) => {
-                        match log_file.flush() {
-                            Ok(_) => {}
-                            Err(e) => {
-                                panic!("Error flushing log file: {}", e);
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        panic!("Error writing to log file: {}", e);
-                    }
-                }
+                let mut log_file = self.open_file();
+                self.append_to_file(&format!("<INFO>{}\n",message), &mut log_file);
             }
         }
     }
 
+    pub fn warn(&self, message: &str) {
+        match self.log_type {
+            LogOutput::StdOut |
+                LogOutput::Console  => {
+                    println!("<WARNING>{}", message);
+                }
+            LogOutput::File => {
+                let mut log_file = self.open_file();
+                self.append_to_file(&format!("<WARNING>{}\n",message), &mut log_file);
+            }
+        }
+    }
     pub fn error(&self, message: &str) {
         match self.log_type {
             LogOutput::StdOut |
                 LogOutput::Console  => {
-                    eprintln!("{}", message);
+                    eprintln!("<ERROR>{}", message);
                 }
             LogOutput::File => {
-                let mut log_file: File;
-                if Path::new(&self.log_file_name).exists() {
-                    log_file = OpenOptions::new()
-                        .append(true)
-                        .open(&self.log_file_name)
-                        .unwrap();
-                }
-                else {
-                    log_file = File::create(&self.log_file_name).unwrap();
-                }
-
-                match log_file.write_all(format!("ERROR: {}", message).as_bytes()) {
-                    Ok(_) => {
-                        match log_file.flush() {
-                            Ok(_) => {}
-                            Err(e) => {
-                                panic!("Error flushing log file: {}", e);
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        panic!("Error writing to log file: {}", e);
-                    }
-                }
+                let mut log_file = self.open_file();
+                self.append_to_file(&format!("<ERROR>{}\n",message), &mut log_file);
             }
         }
     }

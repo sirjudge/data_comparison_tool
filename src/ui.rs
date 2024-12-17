@@ -42,14 +42,10 @@ pub fn get_prev_state() -> UIState {
     unsafe { PREV_STATE.clone() }
 }
 pub fn set_prev_state(state: UIState) {
-    unsafe {
-        PREV_STATE = state;
-    }
+    unsafe { PREV_STATE = state; }
 }
 pub fn set_comparison_data(data: ComparisonData) {
-    unsafe {
-        COMPARISON_DATA = Some(data);
-    }
+    unsafe { COMPARISON_DATA = Some(data); }
 }
 
 pub fn get_comparison_data() -> Option<&'static ComparisonData> {
@@ -105,7 +101,6 @@ fn handle_state(terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>, log:
 pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::Result<()> {
     // initialize terminal and state of the UI and set the state to main menu
     let mut terminal = ratatui::init();
-    let _ = log.info("UI started");
 
     // ensure we correctly handle the state
     match handle_state(&mut terminal, log) {
@@ -117,13 +112,9 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::
                     if key.kind == KeyEventKind::Press {
                         match get_state() {
                             UIState::MainMenu => {
+                                //TODO: handle menu navigation using vim
+                                //and arrow keys
                                 match key.code {
-                                    KeyCode::Up | KeyCode::Char('j') => {
-                                        // select widget and move selection up or down
-                                    }
-                                    KeyCode::Down | KeyCode::Char('k') => {
-                                        // select widget and move selection up or down
-                                    }
                                     KeyCode::Char('s') => {
                                         set_state(UIState::Running);
                                     }
@@ -133,7 +124,7 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::
                                     }
                                     _ => {
                                         let log_string = format!("unrecognized Key pressed: {:?}", key.code);
-                                        let _ = log.info(&log_string);
+                                        log.info(&log_string);
                                     }
                                 }
                             }

@@ -62,6 +62,7 @@ pub struct Arguments {
     /// flag to auto select yes to all prompts
     pub auto_yes: bool,
 
+    /// log output type to allow user to configure where they want logs to go
     pub log_output: LogOutput
 }
 
@@ -109,7 +110,7 @@ impl Arguments {
             auto_yes: false,
             output_file_name: "".to_string(),
             output_file_type: OutputFileType::Csv,
-            log_output: LogOutput::StdOut
+            log_output: LogOutput::File
         };
 
         // loop over each argument
@@ -120,6 +121,10 @@ impl Arguments {
                 let mut split_string = arg.split('=');
                 let flag = split_string.next();
                 let value = split_string.next();
+                // NOTE: I don't know why I'm setting the env var here
+                // maybe take this away but currently no downside to keeping it
+                // other than a few microseconds of compute time which I can
+                // live with?
                 std::env::set_var(flag.unwrap(), value.unwrap());
                 match flag.unwrap() {
                     "-q" => {
@@ -140,6 +145,25 @@ impl Arguments {
                         let table_name = value.unwrap();
                         return_arguments.table_name_2 = format!("{}{}",table_name, current_date_stamp);
                         println!("table name 2: {}", return_arguments.table_name_2);
+                    }
+                    "-logType" => {
+                        match value.unwrap() {
+                            "stdout" | "so" => {
+                                return_arguments.log_output = LogOutput::StdOut;
+                            }
+                            "file" | "f" => {
+                                return_arguments.log_output = LogOutput::File;
+                            }
+                            "console" | "c" => {
+                                return_arguments.log_output = LogOutput::Console;
+                            }
+                            &_ => {
+                                //TODO: Maybe panic is bad, keep for now maybe
+                                //remove later
+                                // - nico 12/17/2024
+                                panic!("Unknown log type: {}", value.unwrap());
+                            }
+                        }
                     }
                     "-output" => {
                         println!("output file: {}", value.unwrap());
