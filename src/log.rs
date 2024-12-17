@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
 
@@ -13,7 +13,7 @@ fn create_log_file() -> Result<String, std::io::Error> {
     let log_file_name = format!("data_comparison_{}.log", datetime_string);
 
     if Path::new(&log_file_name).exists(){
-        println!("Log file already exists, please delete or rename the existing log file");
+        println!("log file already exists: {}", log_file_name);
         return Ok(log_file_name);
     }
 
@@ -30,22 +30,32 @@ pub struct Log {
 impl Log {
     pub fn new(args:&Arguments) -> Log {
         let log_file_name = create_log_file().unwrap();
-        let log_type = &args.log_output;
-
+        //TODO: eventually should fix this
+        let _log_type = &args.log_output;
         Log {
             log_file_name,
-            log_type: log_type.clone()
+            log_type: LogOutput::File
         }
     }
 
     pub fn info(&self, message: &str) {
         match self.log_type {
             LogOutput::StdOut |
-            LogOutput::Console  => {
-                println!("{}", message);
-            }
+                LogOutput::Console  => {
+                    println!("{}", message);
+                }
             LogOutput::File => {
-                let mut log_file = File::create(&self.log_file_name).unwrap();
+                let mut log_file: File;
+                if Path::new(&self.log_file_name).exists() {
+                    log_file = OpenOptions::new()
+                        .append(true)
+                        .open(&self.log_file_name)
+                        .unwrap();
+                }
+                else {
+                    log_file = File::create(&self.log_file_name).unwrap();
+                }
+
                 match log_file.write_all(message.as_bytes()){
                     Ok(_) => {
                         match log_file.flush() {
@@ -66,13 +76,22 @@ impl Log {
     pub fn error(&self, message: &str) {
         match self.log_type {
             LogOutput::StdOut |
-            LogOutput::Console  => {
-                eprintln!("{}", message);
-            }
+                LogOutput::Console  => {
+                    eprintln!("{}", message);
+                }
             LogOutput::File => {
-                let mut log_file = File::create(&self.log_file_name).unwrap();
-                let formatted_message = format!("ERROR: {}", message);
-                match log_file.write_all(formatted_message.as_bytes()) {
+                let mut log_file: File;
+                if Path::new(&self.log_file_name).exists() {
+                    log_file = OpenOptions::new()
+                        .append(true)
+                        .open(&self.log_file_name)
+                        .unwrap();
+                }
+                else {
+                    log_file = File::create(&self.log_file_name).unwrap();
+                }
+
+                match log_file.write_all(format!("ERROR: {}", message).as_bytes()) {
                     Ok(_) => {
                         match log_file.flush() {
                             Ok(_) => {}

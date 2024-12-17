@@ -23,10 +23,8 @@ build-release:
 docker-build:
 	docker compose up -d
 
-clean-docker:
-	docker compose down
-
 clean:
+	docker compose down
 	cargo clean
 	rm -f *.sqlite*
 	rm -f *.csv
@@ -35,6 +33,9 @@ clean:
 clean-logs:
 	rm -f *.log
 
+clean-output:
+	rm -f *.csv
+	rm -f *.sqolite*
+
 profile-release-build:
 	cargo build --release --timings
-	xdg-open target/cargo-timings/cargo-timing*

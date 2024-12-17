@@ -13,7 +13,7 @@ pub(crate) fn export_data(result: &ComparisonData, output_file_name: &str, outpu
                 let unique_table_1_row_file_name = format!("unique_table_1_rows_{}", output_file_name);
                 let mut unique_writer = csv::Writer::from_path(unique_table_1_row_file_name).unwrap();
                 for row in result.unique_table_1_rows.iter(){
-                    let row = sqlite_row_to_csv(row);
+                    let row = sqlite_row_to_csv(row, log);
                     unique_writer.write_record(row).unwrap();
                 }
 
@@ -25,7 +25,7 @@ pub(crate) fn export_data(result: &ComparisonData, output_file_name: &str, outpu
                 let unique_table_2_row_file_name = format!("unique_table_2_rows_{}", output_file_name);
                 let mut unique_writer2 = csv::Writer::from_path(unique_table_2_row_file_name).unwrap();
                 for row in result.unique_table_2_rows.iter(){
-                    let row = sqlite_row_to_csv(row);
+                    let row = sqlite_row_to_csv(row, log);
                     unique_writer2 .write_record(row).unwrap();
                 }
                 unique_writer2.flush().unwrap();
@@ -36,7 +36,7 @@ pub(crate) fn export_data(result: &ComparisonData, output_file_name: &str, outpu
                 let changed_rows_file_name = format!("changed_rows_{}", output_file_name);
                 let mut changed_writer = csv::Writer::from_path(changed_rows_file_name).unwrap();
                 for row in result.changed_rows.iter(){
-                    let row = sqlite_row_to_csv(row);
+                    let row = sqlite_row_to_csv(row, log);
                     changed_writer.write_record(row).unwrap();
                 }
                 changed_writer.flush().unwrap();
@@ -49,7 +49,7 @@ pub(crate) fn export_data(result: &ComparisonData, output_file_name: &str, outpu
     }
 }
 
-fn sqlite_row_to_csv(row: &sqlx::sqlite::SqliteRow) -> Vec<String> {
+fn sqlite_row_to_csv(row: &sqlx::sqlite::SqliteRow, log: &Log) -> Vec<String> {
     // convert sqliteRow to csv row
     let mut csv_row = Vec::new();
     let number_of_columns = row.columns().len();
@@ -73,7 +73,7 @@ fn sqlite_row_to_csv(row: &sqlx::sqlite::SqliteRow) -> Vec<String> {
                 csv_row.push(value);
             }
             _ => {
-                println!("unknown column type: {}", column_type);
+                log.error(&format!("unknown column type: {}", column_type));
             }
         }
     }

@@ -44,19 +44,20 @@ pub(crate) async fn compare_sqlite_tables(
     ) -> ComparisonData {
 
     if in_memory_sqlite && create_sqlite_comparison_files {
-        println!("using in memory sqlite for data comparison,
+        log.info("using in memory sqlite for data comparison,
                  this will be faster but will not save the comparison
                  data to disk, do you want to continue? (yes/no)");
+
         // read from std in
         let mut input = String::new();
         std::io::stdin().read_line(&mut input).unwrap();
         //TODO: take in input args auto-yes flag to pass down to here
         if input == "yes\n" || input == "y" {
-            println!("continuing with in memory sqlite");
+            log.info("continuing with in memory sqlite");
             create_sqlite_comparison_files = false;
         }
         else {
-            println!("exiting program");
+            log.info("exiting program");
             std::process::exit(0);
         }
     }

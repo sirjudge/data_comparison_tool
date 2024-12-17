@@ -112,7 +112,6 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::
         Ok(()) => {
             log.info("State handled successfully");
             loop {
-                let frame = terminal.get_frame();
                 // if event is a key press and it's pressed down
                 if let Event::Key(key) = event::read()? {
                     if key.kind == KeyEventKind::Press {
