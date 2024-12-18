@@ -12,3 +12,26 @@ rand = "0.8.5"
 sqlx = {version = "0.7", default-features = false, features = ["runtime-async-std", "macros", "mysql", "time", "sqlite", "migrate"]}
 timer = "0.2.0"
 tokio = {version="1.36.0", feature = ["full", "rt", "macros"] }
+crossterm = "0.25"
+ratatui = "0.29.0"
+
+[term]
+quiet = false          # whether cargo output is quiet
+verbose = false        # whether cargo provides verbose output
+color = 'auto'         # whether cargo colorizes output
+hyperlinks = true      # whether cargo inserts links into output
+unicode = true         # whether cargo can render output using non-ASCII unicode characters
+progress.when = 'auto' # whether cargo shows progress bar
+progress.width = 80    # width of progress bar
+
+[builds]
+# parallelize build, default:1
+jobs=2
+rustflags = ["-Z", "threads=8"]
+
+# Set rustdoc to be used during doc build
+rustdoc = "rustdoc"
+
+# Incremental compilation avoids redoing work when you recompile a
+# crate, which will ultimately lead to a much faster edit-compile-debug cycle.
+incremental = true

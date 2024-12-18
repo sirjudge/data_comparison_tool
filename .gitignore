@@ -2,6 +2,9 @@
 .idea/
 target/
 
+*.txt
+*.log
+
 # ignore db files
 *.db
 *.sqlite
