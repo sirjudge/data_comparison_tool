@@ -4,9 +4,8 @@ use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
     prelude::CrosstermBackend,
     style::{Color, Style, Stylize},
-    text::Text,
     widgets::{
-        Block, BorderType, Borders, List, ListDirection, ListState, Paragraph, Row, Table, Wrap,
+        Block, List, ListDirection, ListState, Paragraph, Row, Table, Wrap,
     },
     Frame,
 };
@@ -31,12 +30,11 @@ fn get_string_from_state(state: UIState) -> String {
     }
 }
 
-
 /// State management for the UI
 /// I'm aware this may not be the best way to do this
 /// but as a wise sage once said "I'm just a girl trying to do her best"
-static mut STATE: UIState = UIState::StartUp;
-static mut PREV_STATE: UIState = UIState::StartUp;
+static mut CURRENT_STATE: UIState = UIState::StartUp;
+static mut PREVIOUS_STATE: UIState = UIState::StartUp;
 static mut COMPARISON_DATA: Option<ComparisonData> = None;
 
 pub fn set_state(state: UIState, log: &Log) {
@@ -49,21 +47,23 @@ pub fn set_state(state: UIState, log: &Log) {
         let log_message = format!("Setting state to: {:?} from: {:?}",new_state_string,current_state_string);
         log.info(&log_message);
 
-        // set the states
-        PREV_STATE = get_state(log);
-        STATE = state;
+        // current state becomes previous state
+        PREVIOUS_STATE = get_state(log);
+
+        // passed in state becomes the current state
+        CURRENT_STATE = state;
     }
 }
 
 pub fn get_state(log:&Log) -> UIState {
     unsafe {
-        STATE.clone()
+        CURRENT_STATE.clone()
     }
 }
 
 pub fn get_prev_state() -> UIState {
     unsafe {
-        PREV_STATE.clone()
+        PREVIOUS_STATE.clone()
     }
 }
 
@@ -92,13 +92,14 @@ pub fn get_comparison_data() -> Option<&'static ComparisonData> {
     }
 }
 
+/// Handle the rendering of the terminal UI based on the current state
+/// of the UI.
 fn draw_and_handle_state(
     terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>,
     log: &Log,
     args: &argument_parser::Arguments,
 ) -> Result<(), std::io::Error> {
     // if state is startup, do start up stuff
-    // else Handle terminal if we've changed state
     if get_state(log) == UIState::StartUp {
         log.info("performing terminal initialization tasks");
         set_state(UIState::MainMenu, log);
@@ -106,7 +107,9 @@ fn draw_and_handle_state(
         return Ok(());
     }
 
+    // if the previous state and current state are the same
     if get_prev_state() == get_state(log) {
+        //TODO: maybe create debug flag or something for logs like this
         let log_message = format!(
             "no state change detected, returning ok. Current state: {}",
             get_string_from_state(get_state(log))
@@ -115,27 +118,36 @@ fn draw_and_handle_state(
         return Ok(());
     }
 
-    let log_message = format!(
-        "State change detected, pev_state:{} current_state:{}",
-        get_string_from_state(get_state(log)),
-        get_string_from_state(get_prev_state())
+    // generate log message that state has changed
+    log.info(
+        &format!(
+            "State change detected, pev_state:{} current_state:{}",
+            get_string_from_state(get_state(log)),
+            get_string_from_state(get_prev_state())
+        )
     );
-    log.info(&log_message);
+
     // set the previous state to the current state,
     terminal.clear()?;
+
+    // match on the current state and render the appropriate new UI
     match get_state(log) {
         UIState::StartUp | UIState::MainMenu => {
             log.info("performing terminal initialization tasks");
             terminal.draw(draw_main_menu)?;
         }
         UIState::Running => {
-            // pressing 's' will stop and take us back to the main menu
             log.info("Running comparison");
             terminal.draw(draw_running)?;
 
+            // TOOD: This should be done in draw_running but is done
+            // here to avoid lifetime and ownership conflictions
             let comparison_data = processor::run_comparison(args, log);
             set_comparison_data(comparison_data);
             set_state(UIState::Results, log);
+            // BUG: at this point we expect to go to the next loop and have a state change clear
+            // the current screen and draw the results screen
+            log.info("comparison is complete, hopefully new Results screen should be visible");
         }
         UIState::Results => {
             terminal.draw(draw_results)?;
@@ -187,9 +199,9 @@ fn result_key_events(key: KeyCode, log: &Log) {
             set_state(UIState::TearDown, log);
             log.info("setting state to tear down from results menu key press");
         }
-        KeyCode::Char('q') => {
+        KeyCode::Char('m') => {
             set_state(UIState::MainMenu, log);
-            log.info("setting state to tear down from results menu key press");
+            log.info("returning to main menu");
         }
         _ => {
             log.warn(&format!("unrecognized results menu Key pressed: {:?}", key));
@@ -204,12 +216,16 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::
     let mut terminal = ratatui::init();
     log.info("ratatui Terminal initialized");
 
+    // BUG: Somewhere here is a bug where the state is changing
+    //from running -> results but not actually drawing the
+    //results screen automatically
+
+    // BUG: also seems to be going from running -> main menu?
     loop {
         // handle and render the current state and after the state has changed hanlde key events
         match draw_and_handle_state(&mut terminal, log, args) {
             Ok(()) => {
-                log.info(&format!(
-                    "State handled successfully: {:?}",
+                log.info(&format!("current state: {:?}",
                     get_string_from_state(get_state(log))
                 ));
                 if let Event::Key(key) = event::read()? {
@@ -219,6 +235,7 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::
                                 handle_main_menu_keys(key.code, log);
                             }
                             UIState::Running => {
+                                log.info("running state key press detected");
                                 runtime_key_events(key.code, log);
                             }
                             UIState::Results => {
@@ -236,9 +253,10 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::
                 log.error(&log_string);
             }
         }
+
+        // if we're still in the tear down state at the end of the loop
+        // break and finish execution
         if get_state(log) == UIState::TearDown {
-            // if we're still in the tear down state at the end of the loop just break and finish
-            // execution
             break;
         }
     }
@@ -302,17 +320,19 @@ fn calculate_layout(area: Rect) -> (Rect, Vec<Vec<Rect>>) {
 /// of running the current data comparison
 fn draw_running(frame: &mut Frame) {
     let (title_area, main_areas) = calculate_layout(frame.area());
-    render_title(frame, title_area);
-    let text = Text::raw("Run time log");
-    frame.render_widget(text, frame.area());
-    let widget = Block::default()
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
-        .border_style(Style::default().fg(Color::Blue))
-        .style(Style::default().bg(Color::Black));
+    frame.render_widget(
+        Paragraph::new("Data Comparison Tool. Press q to quit")
+            .bold()
+            .white()
+            .alignment(Alignment::Center),
+        title_area
+    );
 
-    frame.render_widget(widget, main_areas[0][0]);
-    write_to_output(frame, main_areas[1][0], "Running");
+    let text_widget = Paragraph::new("Running comparison")
+        .wrap(Wrap { trim: true })
+        .alignment(Alignment::Center)
+        .style(Style::default().fg(Color::White));
+    frame.render_widget(text_widget, main_areas[0][0]);
 }
 
 /// Render the main menu of the terminal UI
@@ -332,26 +352,4 @@ fn draw_main_menu(frame: &mut Frame) {
     // render the list
     let mut state = ListState::default();
     frame.render_stateful_widget(list, frame.area(), &mut state);
-}
-
-/// Renders the title of the terminal UI
-fn render_title(frame: &mut Frame, area: Rect) {
-    frame.render_widget(
-        Paragraph::new("Data Comparison Tool. Press q to quit")
-            .bold()
-            .white()
-            .alignment(Alignment::Center),
-        area,
-    );
-}
-
-/// Writes test to the passed in frame and area
-fn write_to_output(frame: &mut Frame, area: Rect, text: &str) {
-    frame.render_widget(
-        Paragraph::new(text)
-            .wrap(Wrap { trim: true })
-            .alignment(Alignment::Left)
-            .style(Style::default().fg(Color::White)),
-        area,
-    );
 }
