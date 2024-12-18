@@ -145,8 +145,11 @@ fn draw_and_handle_state(
             let comparison_data = processor::run_comparison(args, log);
             set_comparison_data(comparison_data);
             set_state(UIState::Results, log);
-            // BUG: at this point we expect to go to the next loop and have a state change clear
-            // the current screen and draw the results screen
+
+            // TODO: This is a hack to get an automatic redraw without having
+            // to accept a keypress after the state change above
+            terminal.clear()?;
+            terminal.draw(draw_results)?;
             log.info("comparison is complete, hopefully new Results screen should be visible");
         }
         UIState::Results => {
@@ -216,11 +219,8 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::
     let mut terminal = ratatui::init();
     log.info("ratatui Terminal initialized");
 
-    // BUG: Somewhere here is a bug where the state is changing
-    //from running -> results but not actually drawing the
-    //results screen automatically
-
-    // BUG: also seems to be going from running -> main menu?
+    //BUG: the following key presses cause a crash from a table already existing
+    //Main menu > running > results > main menu > running
     loop {
         // handle and render the current state and after the state has changed hanlde key events
         match draw_and_handle_state(&mut terminal, log, args) {
@@ -338,7 +338,7 @@ fn draw_running(frame: &mut Frame) {
 /// Render the main menu of the terminal UI
 fn draw_main_menu(frame: &mut Frame) {
     // init possible items
-    let items = ["[S]tart", "[Q]uit", "[V]iew Past Results"];
+    let items = ["[S]tart", "[Q]uit"];
 
     // create widget
     let list = List::new(items)
