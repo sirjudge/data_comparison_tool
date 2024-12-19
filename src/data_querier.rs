@@ -25,15 +25,12 @@ pub struct TableData {
     pub primary_key: String
 }
 
+
+
+
 /// given a table now select 1 row from the table and extract
 /// a list of columns and the primary key
 pub(crate) async fn get_mysql_table_data(table_name: &str, log: &Log) -> TableData {
-    //BUG: this needs to be handled better and I think is maybe causing an issue
-    // because of the rename of the main database in mysql table
-    // maybe take in env variable?
-    // This is hardcoded for now to resolve build first and should be
-    // handled better
-    //Original:let pool = get_mysql_connection("test").await;
     let pool = get_mysql_connection("ComparisonData", log).await;
     let result = sqlx::query(&format!("select * from {} limit 1", table_name))
         .fetch_one(&pool)
@@ -84,41 +81,22 @@ pub(crate) async fn get_sqlite_connection(log: &Log) -> Pool<sqlx::Sqlite>{
 
 /// open a connection to the mysql databse
 pub(crate) async fn get_mysql_connection(database_name: &str, log: &Log) -> Pool<MySql> {
-    // TODO: This is the old code commented out (plus an added password in attempts to make it work
-    // with a password)
-    let mysql_connection_string = env::var("MYSQL_CONNECTION_STRING");
-    match mysql_connection_string {
-        Ok(connection_string) => {
-            let result = MySqlPoolOptions::new()
-                .acquire_timeout(std::time::Duration::from_secs(5))
-                .connect(&connection_string).await;
-            match result {
-                Ok(pool) => {
-                    log.info(&format!("connected to mysql database: {}", database_name));
-                    pool
-                }
-                Err(error) => {
-                    panic!("unable to connect to mysql db {}", error);
-                }
-            }
+    let database_name_override = "ComparisonData";
+    let mysql_connection_string = env::var("MYSQL_CONNECTION_STRING_USER")
+        .unwrap_or_else(|_| "".to_string());
+    let db_url = format!("mysql://nico:RealPassw0rd@0.0.0.0:3306/{}", database_name_override);
+
+    // attempt to connect and handle success/fail accordingly
+    let result = MySqlPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_secs(5))
+        .connect(&mysql_connection_string).await;
+    match result {
+        Ok(pool) => {
+            log.info(&format!("connected to mysql database: {}", database_name));
+            pool
         }
         Err(error) => {
-            log.info(&format!("error connecting to database: {}", error));
-            let database_name_override = "ComparisonData";
-            let db_url = format!("mysql://nico:RealPassw0rd@0.0.0.0:3306/{}", database_name_override);
-            log.info(&format!("using default connection instead"));
-            let result = MySqlPoolOptions::new()
-                .acquire_timeout(std::time::Duration::from_secs(5))
-                .connect(&db_url).await;
-            match result {
-                Ok(pool) => {
-                    log.info(&format!("connected to mysql database pool: {}", database_name));
-                    pool
-                }
-                Err(error) => {
-                    panic!("unable to connect to mysql db {}", error);
-                }
-            }
+            panic!("unable to connect to mysql db {}", error);
         }
     }
 }

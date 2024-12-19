@@ -1,5 +1,8 @@
-use crate::data_querier::{get_sqlite_connection, TableData};
-use crate::log::Log;
+use crate::{
+    argument_parser::Arguments,
+    data_querier::{get_sqlite_connection, TableData},
+    log::Log
+};
 use sqlx::{Column, SqlitePool};
 
 /// Struct to hold the comparison data between the two tables
@@ -38,19 +41,19 @@ pub(crate) async fn compare_sqlite_tables(
     mut create_sqlite_comparison_files: bool,
     in_memory_sqlite: bool,
     log: &Log,
+    auto_yes: bool
 ) -> ComparisonData {
     if in_memory_sqlite && create_sqlite_comparison_files {
-        log.info(
-            "using in memory sqlite for data comparison,
-                 this will be faster but will not save the comparison
-                 data to disk, do you want to continue? (yes/no)",
+        log.info("using in memory sqlite for data comparison,
+             this will be faster but will not save the comparison
+             data to disk, do you want to continue? (yes/no)",
         );
 
         // read from std in
         let mut input = String::new();
         std::io::stdin().read_line(&mut input).unwrap();
         //TODO: take in input args auto-yes flag to pass down to here
-        if input == "yes\n" || input == "y" {
+        if input == "yes\n" || input == "y" || auto_yes {
             log.info("continuing with in memory sqlite");
             create_sqlite_comparison_files = false;
         } else {
@@ -101,41 +104,37 @@ async fn get_changed_rows(
     create_sqlite_comparison_files: bool,
     log: &Log,
 ) -> Vec<sqlx::sqlite::SqliteRow> {
-    // generate a select statement to find rows that have the same primary id but differ in other columns
-
-    let select_query;
-    if create_sqlite_comparison_files {
-        select_query = format!(
-            "create table changedRows_{}
+    let select_query = if create_sqlite_comparison_files {
+        format!("
+            create table changedRows_{}
             as
             select *
             from {}
             where exists (
                 select * from {} where {} = {}
-                );
-            select * from changedRows_{}",
+            );
+            select * from changedRows_{}
+            ",
             sqlite_table_1.table_name,
             sqlite_table_1.table_name,
             sqlite_table_2.table_name,
             sqlite_table_1.primary_key,
             sqlite_table_2.primary_key,
             sqlite_table_1.table_name
-        );
+        )
     } else {
-        select_query = format!(
-            "
+        format!("
             select *
             from {}
             where exists (
                 select * from {} where {} = {}
-                );
-            ",
+            );",
             sqlite_table_1.table_name,
             sqlite_table_2.table_name,
             sqlite_table_1.primary_key,
             sqlite_table_2.primary_key
-        );
-    }
+        )
+    }.to_string();
 
     // execute select query
     let rows = sqlx::query(select_query.as_str())
@@ -185,11 +184,11 @@ async fn generate_main_comparison_file(
         let column_name = column.name();
         let query_column = format!(
             "case
-            when t1.{} is null and t2.{} is not null then '()'||t2.{}
-            when t1.{} is not null and t2.{} is null then t1.{}||'()'
-            when t1.{} != t2.{} then t1.{}||'('||t2.{}||')'
+                when t1.{} is null and t2.{} is not null then '()'||t2.{}
+                when t1.{} is not null and t2.{} is null then t1.{}||'()'
+                when t1.{} != t2.{} then t1.{}||'('||t2.{}||')'
             else t1.{}
-        end as {},",
+            end as {},",
             column_name,
             column_name,
             column_name,
@@ -248,10 +247,9 @@ async fn get_unique_rows(
     create_sqlite_comparison_files: bool,
     log: &Log,
 ) -> Vec<sqlx::sqlite::SqliteRow> {
-    let select_query;
-    if create_sqlite_comparison_files {
+    let select_query = if create_sqlite_comparison_files {
         // generate select statement and join on the primary key
-        select_query = format!(
+        format!(
             "create table unique_{}
             as
             select *
@@ -266,9 +264,9 @@ async fn get_unique_rows(
             sqlite_table_1.primary_key,
             sqlite_table_2.primary_key,
             sqlite_table_1.table_name
-        );
+        )
     } else {
-        select_query = format!(
+        format!(
             "select *
             from {}
             where not exists (
@@ -278,11 +276,10 @@ async fn get_unique_rows(
             sqlite_table_1.table_name,
             sqlite_table_1.primary_key,
             sqlite_table_2.primary_key
-        );
-    }
+        )
+    };
 
     // execute select query
-    // BUG: if the table already exists then this query will fail
     let rows = sqlx::query(select_query.as_str())
         .fetch_all(sqlite_pool)
         .await;

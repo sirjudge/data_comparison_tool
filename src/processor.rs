@@ -80,7 +80,7 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
 
     // compare the data
     now = SystemTime::now();
-    let result = block_on(data_comparer::compare_sqlite_tables(&table_1_data,&table_2_data, args.create_sqlite_comparison_files, args.in_memory_sqlite, log));
+    let result = block_on(data_comparer::compare_sqlite_tables(&table_1_data,&table_2_data, args.create_sqlite_comparison_files, args.in_memory_sqlite, log, args.auto_yes));
 
     match now.elapsed(){
         Ok(elapsed) => {
