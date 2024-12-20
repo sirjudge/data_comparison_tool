@@ -4,12 +4,12 @@ pub mod database {
 }
 
 pub mod models {
-    pub mod argument_parser;
     pub mod comparison_data;
     pub mod table_data;
 }
 
 pub mod interface {
+    pub mod argument_parser;
     pub mod ui;
     pub mod state;
     pub mod log_options;

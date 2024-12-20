@@ -1,16 +1,10 @@
 use chrono::Local;
 use std::process::exit;
+use crate::interface::log_options::LogOutput;
 
 pub enum OutputFileType {
     Csv,
     Json
-}
-
-#[derive(Clone)]
-pub enum LogOutput {
-    StdOut,
-    File,
-    Console
 }
 
 /// Struct to hold the arguments passed in from the command line

@@ -6,11 +6,11 @@ use crate::{
         mysql,
         sqlite
     },
-    models::{
-        comparison_data::ComparisonData,
-        argument_parser
+    models::comparison_data::ComparisonData,
+    interface::{
+        log::Log,
+        argument_parser,
     },
-    interface::log::Log,
     data_querier,
     data_exporter
 };

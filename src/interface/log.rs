@@ -4,8 +4,8 @@ use std::{
     path::Path
 };
 use crate::{
-    models::argument_parser::{Arguments, LogOutput},
-    interface::log_options::LogVerbosity
+    models::argument_parser::Arguments,
+    interface::log_options::{LogVerbosity, LogOutput}
 };
 
 /// creates a log file and returns the generated log file name

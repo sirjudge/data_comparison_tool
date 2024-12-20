@@ -1,9 +1,9 @@
 use crate::{
-    interface::log::Log,
-    models::{
+    interface::{
+        log::Log,
         argument_parser::OutputFileType,
-        comparison_data::ComparisonData
     },
+    models::comparison_data::ComparisonData,
 };
 use sqlx::{ Row, Column  };
 

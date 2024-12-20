@@ -5,11 +5,9 @@ use crate::{
             get_string_from_state
         },
         log::Log,
-    },
-    models::{
         argument_parser,
-        comparison_data::ComparisonData
     },
+    models::comparison_data::ComparisonData,
     processor,
 };
 
