@@ -26,7 +26,6 @@ fn create_log_file() -> Result<String, Error> {
     Ok(log_file_name)
 }
 
-
 pub struct Log {
     pub log_file_name: String,
     pub log_type: LogOutput,

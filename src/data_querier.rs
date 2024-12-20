@@ -48,7 +48,7 @@ pub(crate) async fn mysql_table_to_sqlite_table(
         log.info(&format!("created new sqlite table: {}", &table_data.table_name));
 
         // generate the insert query and run it
-        let insert_query = create_sqlite_insert_query(mysql_rows, &table_data.table_name);
+        let insert_query = create_sqlite_insert_query_from_mysql_row(mysql_rows, &table_data.table_name);
         let result = sqlx::query(insert_query.as_str()).execute(&sqlite_pool).await;
 
         match result {
@@ -95,7 +95,7 @@ async fn create_new_sqlite_table(
 }
 
 // generates a new sqlite insert query from a passed in mysql row
-fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> String {
+fn create_sqlite_insert_query_from_mysql_row(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> String {
     // for each row in mysql generate the insert statement
     let mut insert_query = format!("insert into {} (", table_name);
 
@@ -117,7 +117,7 @@ fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> S
             let column_name = column.name();
             let column_type = column.type_info().name();
 
-            // TODO: add support for datetime
+            // TODO: add support for other column types here
             match column_type {
                 "INT" => {
                     let value: i32 = row.get(column_name);
@@ -138,6 +138,7 @@ fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> S
                 },
             }
         }
+
         // remove trailing comma and add closing parens
         value_insert_string.pop();
         value_insert_string.push_str("),");
