@@ -3,13 +3,13 @@ use std::time::SystemTime;
 use crate::{
     data_creator,
     database::{
-        mysql, sqlite
+        mysql,
+        sqlite
     },
     models::{
         comparison_data::ComparisonData,
         argument_parser
     },
-    data_comparer,
     log::Log,
     data_querier,
     data_exporter
@@ -85,7 +85,7 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
 
     // compare the data
     now = SystemTime::now();
-    let result = block_on(data_comparer::compare_sqlite_tables(&table_1_data,&table_2_data, args.create_sqlite_comparison_files, args.in_memory_sqlite, log, args.auto_yes));
+    let result = block_on(sqlite::compare_sqlite_tables(&table_1_data,&table_2_data, args.create_sqlite_comparison_files, args.in_memory_sqlite, log, args.auto_yes));
 
     match now.elapsed(){
         Ok(elapsed) => {

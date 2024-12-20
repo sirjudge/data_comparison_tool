@@ -15,30 +15,18 @@ use std::env;
 /// open a connection to the mysql databse
 pub(crate) async fn get_mysql_connection(database_name: &str, log: &Log) -> Pool<MySql> {
     let database_name_override = "ComparisonData";
-    /*
-       let mysql_connection_string =
-       env::var("MYSQL_CONNECTION_STRING_USER")
-       .unwrap_or_else(|_| "".to_string());
-       let db_url = format!("mysql://nico:RealPassw0rd@0.0.0.0:3306/{}", database_name_override);
-       */
-
-    //.unwrap_or_else(|_| "mysql://nico:RealPassw0rd@localhost:3306/ComparisonData".to_string());
-
-    let mut mysql_connection_string = "".to_string();
 
     let connection_string_env_var = env::var("MYSQL_CONNECTION_STRING_USER");
-    match connection_string_env_var {
-        Ok(connection_string_env_var) => {
-            mysql_connection_string = connection_string_env_var;
-        },
+    let mysql_connection_string = match connection_string_env_var {
+        Ok(connection_string_env_var) => connection_string_env_var,
         Err(_) => {
             log.error("MYSQL_CONNECTION_STRING_USER not set, using default connection string");
-            mysql_connection_string = format!(
+            format!(
                 "mysql://nico:RealPassw0rd@localhost:3306/{}",
                 database_name_override
-            );
+            )
         },
-    }
+    };
 
     // attempt to connect and handle success/fail accordingly
     let result = MySqlPoolOptions::new()

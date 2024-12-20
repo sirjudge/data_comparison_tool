@@ -8,15 +8,9 @@ use crate::{
 };
 
 use sqlx::{
-    migrate::MigrateDatabase,
-    mysql::{MySqlColumn, MySqlPoolOptions, MySqlRow},
-    sqlite::SqlitePoolOptions,
-    Column, MySql, Pool, Row, TypeInfo,
+    mysql::MySqlRow,
+    Column, Pool, Row, TypeInfo,
 };
-
-use std::env;
-
-
 
 /// open a connection to the mysql databse, executes the query and then
 /// returns a vector of the rows returned

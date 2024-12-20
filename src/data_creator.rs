@@ -1,7 +1,6 @@
 use rand::{ thread_rng, Rng};
 use crate::{
     database::mysql::get_mysql_connection,
-    models::comparison_data::ComparisonData,
     log::Log
 };
 

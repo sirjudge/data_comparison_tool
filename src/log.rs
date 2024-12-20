@@ -30,11 +30,9 @@ pub struct Log {
 
 impl Log {
     pub fn new(args:&Arguments) -> Log {
-        let log_file_name = create_log_file().unwrap();
-        let _log_type = &args.log_output;
         Log {
-            log_file_name,
-            log_type: LogOutput::File
+            log_file_name: create_log_file().unwrap(),
+            log_type: args.log_output.clone()
         }
     }
 
