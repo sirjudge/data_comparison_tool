@@ -22,7 +22,7 @@ pub fn run_comparison(args: &argument_parser::Arguments, log: &Log) -> Compariso
 
     // if the clean flag is set then clean up the sqlite databses
     if args.clean {
-        block_on(data_creator::clear_sqlite_data());
+        block_on(sqlite::clear_sqlite_data());
         log.info("cleaned sqlite database");
     }
 

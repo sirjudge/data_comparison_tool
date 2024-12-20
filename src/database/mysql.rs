@@ -6,7 +6,8 @@ use sqlx::{
     Row,
     Pool,
     mysql::{
-        MySqlPoolOptions, MySql
+        MySqlPoolOptions,
+        MySql
     }
 };
 use std::env;
@@ -15,12 +16,16 @@ use std::env;
 /// open a connection to the mysql databse
 pub(crate) async fn get_mysql_connection(database_name: &str, log: &Log) -> Pool<MySql> {
     let database_name_override = "ComparisonData";
+    // BUG: the connection string is definitely an env variable but is not being populated
+    // correctly.
+    log.debug("attempting to get mysql connection string from env var");
+    log.debug(&format!("env vars: {:?}", env::vars()));
 
     let connection_string_env_var = env::var("MYSQL_CONNECTION_STRING_USER");
     let mysql_connection_string = match connection_string_env_var {
         Ok(connection_string_env_var) => connection_string_env_var,
         Err(_) => {
-            log.error("MYSQL_CONNECTION_STRING_USER not set, using default connection string");
+            log.warn("MYSQL_CONNECTION_STRING_USER not set, using default connection string");
             format!(
                 "mysql://nico:RealPassw0rd@localhost:3306/{}",
                 database_name_override
@@ -49,8 +54,11 @@ pub(crate) async fn get_mysql_connection(database_name: &str, log: &Log) -> Pool
 /// a list of columns and the primary key
 pub(crate) async fn get_mysql_table_data(table_name: &str, log: &Log) -> TableData {
     let pool = get_mysql_connection("ComparisonData", log).await;
-    let result =
-        sqlx::query(&format!("select * from {} limit 1", table_name)).fetch_one(&pool).await;
+    let select_query = format!("select * from {} limit 1", table_name);
+
+    //BUG: when using `cargo test` this query is failing to look up the table
+    //for some reason
+    let result = sqlx::query(&select_query).fetch_one(&pool).await;
     match result {
         Ok(row) => {
             let columns = row.columns();
@@ -67,7 +75,7 @@ pub(crate) async fn get_mysql_table_data(table_name: &str, log: &Log) -> TableDa
             }
         },
         Err(error) => {
-            panic!("error occurred while fetching table data: {:?}", error);
+            panic!("error occurred while fetching table data from {:?}", error);
         },
     }
 }

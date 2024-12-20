@@ -116,11 +116,11 @@ impl Log {
         if self.verbose.clone() as i32 > LogVerbosity::Warning as i32 {
             return;
         }
+
         match self.log_type {
-            LogOutput::StdOut |
-                LogOutput::Console  => {
-                    println!("<WARNING>{}", message);
-                }
+            LogOutput::StdOut | LogOutput::Console  => {
+                println!("<WARNING>{}", message);
+            }
             LogOutput::File => {
                 let mut log_file = self.open_file();
                 self.append_to_file(&format!("<WARNING>{}\n",message), &mut log_file);
@@ -131,7 +131,6 @@ impl Log {
     /// print error message to the configured output
     /// note: we always want to print errors so don't need to check verbosity at this point
     pub fn error(&self, message: &str) {
-
         match self.log_type {
             LogOutput::StdOut |
                 LogOutput::Console  => {

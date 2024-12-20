@@ -77,17 +77,4 @@ fn random_string(len: usize) -> String {
     result
 }
 
-/// Cleans up all sqlite files inside the current executing directory
-pub(crate) async fn clear_sqlite_data(){
-    // get all files in the current directory
-    let files = std::fs::read_dir(".").unwrap();
-    for file in files{
-        let file = file.unwrap();
-        let file_name = file.file_name();
-        let file_name = file_name.to_str().unwrap();
-        if file_name.ends_with(".sqlite"){
-            std::fs::remove_file(file_name).unwrap();
-        }
-    }
-}
 

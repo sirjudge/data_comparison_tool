@@ -36,6 +36,7 @@ pub(crate) fn export_data(result: &ComparisonData, output_file_name: &str, outpu
                 drop(unique_writer2);
             }
 
+            //BUG: I think we're only
             if !result.changed_rows.is_empty() {
                 let changed_rows_file_name = format!("changed_rows_{}", output_file_name);
                 let mut changed_writer = csv::Writer::from_path(changed_rows_file_name).unwrap();
