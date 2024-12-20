@@ -2,12 +2,17 @@ use async_std::task::block_on;
 use std::time::SystemTime;
 use crate::{
     data_creator,
-    data_comparer::ComparisonData,
+    database::{
+        mysql, sqlite
+    },
+    models::{
+        comparison_data::ComparisonData,
+        argument_parser
+    },
     data_comparer,
     log::Log,
     data_querier,
-    data_exporter,
-    argument_parser,
+    data_exporter
 };
 
 pub fn run_comparison(args: &argument_parser::Arguments, log: &Log) -> ComparisonData {
@@ -33,8 +38,8 @@ pub fn run_comparison(args: &argument_parser::Arguments, log: &Log) -> Compariso
 
 fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData {
     // extract mysql data ino the table data struct
-    let table_1_data = block_on(data_querier::get_mysql_table_data(&args.table_name_1, log));
-    let table_2_data = block_on(data_querier::get_mysql_table_data(&args.table_name_2, log));
+    let table_1_data = block_on(mysql::get_mysql_table_data(&args.table_name_1, log));
+    let table_2_data = block_on(mysql::get_mysql_table_data(&args.table_name_2, log));
 
     // declare query_1 and query_2 variables but don't give them a value
     let mut query_1 = args.mysql_query_1.clone();

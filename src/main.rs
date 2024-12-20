@@ -1,13 +1,10 @@
 use std::io;
-
-mod argument_parser;
-mod data_comparer;
-mod data_creator;
-mod data_exporter;
-mod data_querier;
-mod log;
-mod processor;
-mod ui;
+use data_comparison_tool::{
+    processor,
+    ui,
+    models::argument_parser,
+    log
+};
 
 fn main() -> Result<(), io::Error> {
     // parse input arguments and initialize the log
@@ -30,16 +27,3 @@ fn main() -> Result<(), io::Error> {
     Ok(())
 }
 
-#[cfg(test)]
-pub mod main_tests {
-    use super::*;
-
-    /// a defaultly initialized argument should always pass
-    /// this test
-    #[test]
-    pub fn run_comparison_no_terminal_default_arg() {
-        let arguments = argument_parser::Arguments::new();
-        let log = log::Log::new(&arguments);
-        processor::run_comparison(&arguments, &log);
-    }
-}

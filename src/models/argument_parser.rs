@@ -87,6 +87,12 @@ pub(crate) fn print_help(){
     println!("\t-output=<output_file> : specify the name of the output csv file");
 }
 
+impl Default for Arguments {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Arguments {
     pub fn new () -> Arguments {
         // init argument struct

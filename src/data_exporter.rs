@@ -1,6 +1,10 @@
-use crate::data_comparer::ComparisonData;
-use crate::argument_parser::OutputFileType;
-use crate::log::Log;
+use crate::{
+    log::Log,
+    models::{
+        argument_parser::OutputFileType,
+        comparison_data::ComparisonData
+    },
+};
 use sqlx::{ Row, Column  };
 
 pub(crate) fn export_data(result: &ComparisonData, output_file_name: &str, output_file_type: &OutputFileType, log: &Log) {

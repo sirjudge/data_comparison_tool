@@ -1,4 +1,12 @@
-use crate::{argument_parser, data_comparer::ComparisonData, log::Log, processor};
+use crate::{
+    models::{
+        argument_parser,
+        comparison_data::ComparisonData
+    },
+    log::Log,
+    processor,
+};
+
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Alignment, Constraint, Layout, Rect},
@@ -214,7 +222,7 @@ fn result_key_events(key: KeyCode, log: &Log) {
 
 /// Initialize the terminal UI, run start up tasks, and then display
 /// the main menu to the user
-pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::Result<()> {
+pub fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::Result<()> {
     // initialize terminal and state of the UI and set the state to main menu
     let mut terminal = ratatui::init();
     log.info("ratatui Terminal initialized");
