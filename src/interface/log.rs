@@ -3,9 +3,9 @@ use std::{
     io::{Write,Error},
     path::Path
 };
-use crate::{
-    models::argument_parser::Arguments,
-    interface::log_options::{LogVerbosity, LogOutput}
+use crate::interface::{
+    log_options::{LogVerbosity, LogOutput},
+    argument_parser::Arguments,
 };
 
 /// creates a log file and returns the generated log file name

@@ -1,8 +1,10 @@
 use std::io;
 use data_comparison_tool::{
     processor,
-    interface::ui,
-    models::argument_parser,
+    interface::{
+        ui,
+        argument_parser,
+    },
     interface::log::Log
 };
 
