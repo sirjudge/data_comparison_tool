@@ -1,7 +1,7 @@
 use std::io;
 use data_comparison_tool::{
     processor,
-    ui,
+    interface::ui,
     models::argument_parser,
     log
 };

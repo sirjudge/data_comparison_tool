@@ -1,4 +1,8 @@
 use crate::{
+    interface::state::{
+        UIState,
+        get_string_from_state
+    },
     models::{
         argument_parser,
         comparison_data::ComparisonData
@@ -19,24 +23,6 @@ use ratatui::{
 };
 use std::{io, io::Stdout};
 
-#[derive(PartialEq, Clone)]
-pub enum UIState {
-    Running,
-    MainMenu,
-    StartUp,
-    Results,
-    TearDown,
-}
-
-fn get_string_from_state(state: UIState) -> String {
-    match state {
-        UIState::MainMenu => "Main Menu".to_string(),
-        UIState::Running => "Running".to_string(),
-        UIState::Results => "Results".to_string(),
-        UIState::TearDown => "Tear Down".to_string(),
-        UIState::StartUp => "Start Up".to_string(),
-    }
-}
 
 /// State management for the UI
 /// I'm aware this may not be the best way to do this
