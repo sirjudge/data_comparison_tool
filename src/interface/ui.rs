@@ -1,4 +1,16 @@
-use crate::{argument_parser, data_comparer::ComparisonData, log::Log, processor};
+use crate::{
+    interface::state::{
+        UIState,
+        get_string_from_state
+    },
+    models::{
+        argument_parser,
+        comparison_data::ComparisonData
+    },
+    log::Log,
+    processor,
+};
+
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Alignment, Constraint, Layout, Rect},
@@ -11,24 +23,6 @@ use ratatui::{
 };
 use std::{io, io::Stdout};
 
-#[derive(PartialEq, Clone)]
-pub enum UIState {
-    Running,
-    MainMenu,
-    StartUp,
-    Results,
-    TearDown,
-}
-
-fn get_string_from_state(state: UIState) -> String {
-    match state {
-        UIState::MainMenu => "Main Menu".to_string(),
-        UIState::Running => "Running".to_string(),
-        UIState::Results => "Results".to_string(),
-        UIState::TearDown => "Tear Down".to_string(),
-        UIState::StartUp => "Start Up".to_string(),
-    }
-}
 
 /// State management for the UI
 /// I'm aware this may not be the best way to do this
@@ -42,20 +36,20 @@ pub fn set_state(state: UIState, log: &Log) {
     // to whatever is passed in
     unsafe {
         // log the state change
-        let current_state_string = get_string_from_state(get_state(log));
+        let current_state_string = get_string_from_state(get_state());
         let new_state_string = get_string_from_state(state.clone());
         let log_message = format!("Setting state to: {:?} from: {:?}",new_state_string,current_state_string);
         log.info(&log_message);
 
         // current state becomes previous state
-        PREVIOUS_STATE = get_state(log);
+        PREVIOUS_STATE = get_state();
 
         // passed in state becomes the current state
         CURRENT_STATE = state;
     }
 }
 
-pub fn get_state(log:&Log) -> UIState {
+pub fn get_state() -> UIState {
     unsafe {
         CURRENT_STATE.clone()
     }
@@ -100,7 +94,7 @@ fn draw_and_handle_state(
     args: &argument_parser::Arguments,
 ) -> Result<(), std::io::Error> {
     // if state is startup, do start up stuff
-    if get_state(log) == UIState::StartUp {
+    if get_state() == UIState::StartUp {
         log.info("performing terminal initialization tasks");
         set_state(UIState::MainMenu, log);
         terminal.draw(draw_main_menu)?;
@@ -108,11 +102,11 @@ fn draw_and_handle_state(
     }
 
     // if the previous state and current state are the same
-    if get_prev_state() == get_state(log) {
+    if get_prev_state() == get_state() {
         //TODO: maybe create debug flag or something for logs like this
         let log_message = format!(
             "no state change detected, returning ok. Current state: {}",
-            get_string_from_state(get_state(log))
+            get_string_from_state(get_state())
         );
         log.info(&log_message);
         return Ok(());
@@ -122,7 +116,7 @@ fn draw_and_handle_state(
     log.info(
         &format!(
             "State change detected, pev_state:{} current_state:{}",
-            get_string_from_state(get_state(log)),
+            get_string_from_state(get_state()),
             get_string_from_state(get_prev_state())
         )
     );
@@ -131,7 +125,7 @@ fn draw_and_handle_state(
     terminal.clear()?;
 
     // match on the current state and render the appropriate new UI
-    match get_state(log) {
+    match get_state() {
         UIState::StartUp | UIState::MainMenu => {
             log.info("performing terminal initialization tasks");
             terminal.draw(draw_main_menu)?;
@@ -214,7 +208,7 @@ fn result_key_events(key: KeyCode, log: &Log) {
 
 /// Initialize the terminal UI, run start up tasks, and then display
 /// the main menu to the user
-pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::Result<()> {
+pub fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::Result<()> {
     // initialize terminal and state of the UI and set the state to main menu
     let mut terminal = ratatui::init();
     log.info("ratatui Terminal initialized");
@@ -226,11 +220,11 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::
         match draw_and_handle_state(&mut terminal, log, args) {
             Ok(()) => {
                 log.info(&format!("current state: {:?}",
-                    get_string_from_state(get_state(log))
+                    get_string_from_state(get_state())
                 ));
                 if let Event::Key(key) = event::read()? {
                     if key.kind == KeyEventKind::Press {
-                        match get_state(log) {
+                        match get_state() {
                             UIState::MainMenu => {
                                 handle_main_menu_keys(key.code, log);
                             }
@@ -256,7 +250,7 @@ pub(crate) fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::
 
         // if we're still in the tear down state at the end of the loop
         // break and finish execution
-        if get_state(log) == UIState::TearDown {
+        if get_state() == UIState::TearDown {
             break;
         }
     }
