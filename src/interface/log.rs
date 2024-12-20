@@ -28,9 +28,9 @@ fn create_log_file() -> Result<String, Error> {
 
 
 pub struct Log {
-    log_file_name: String,
-    log_type: LogOutput,
-    verbose: LogVerbosity
+    pub log_file_name: String,
+    pub log_type: LogOutput,
+    pub verbose: LogVerbosity
 }
 
 impl Log {
@@ -46,13 +46,13 @@ impl Log {
     /// file if it doesn't
     fn open_file(&self) -> File {
         if Path::new(&self.log_file_name).exists() {
-                OpenOptions::new()
+            OpenOptions::new()
                 .append(true)
                 .open(&self.log_file_name)
                 .unwrap()
         }
         else {
-                File::create(&self.log_file_name).unwrap()
+            File::create(&self.log_file_name).unwrap()
         }
     }
 
