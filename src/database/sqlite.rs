@@ -3,7 +3,7 @@ use crate::{
         comparison_data::ComparisonData,
         table_data::TableData,
     },
-    log::Log
+    interface::log::Log
 };
 use sqlx::{
     migrate::MigrateDatabase,
@@ -14,7 +14,7 @@ use sqlx::{
 };
 
 /// open a connection to the sqlite database
-pub(crate) async fn get_sqlite_connection(log: &Log) -> Pool<sqlx::Sqlite> {
+pub(crate) async fn get_connection(log: &Log) -> Pool<sqlx::Sqlite> {
     let db_url = "sqlite://./db.sqlite3";
     // check if sqlite database exists and create it if it doesn't
     if !sqlx::Sqlite::database_exists(db_url).await.unwrap() {
@@ -36,7 +36,7 @@ pub(crate) async fn get_sqlite_connection(log: &Log) -> Pool<sqlx::Sqlite> {
 }
 
 /// Compare two sqlite tables and return the differences
-pub(crate) async fn compare_sqlite_tables(
+pub(crate) async fn compare_tables_sqlite (
     table_data_1: &TableData,
     table_data_2: &TableData,
     mut create_sqlite_comparison_files: bool,
@@ -64,7 +64,7 @@ pub(crate) async fn compare_sqlite_tables(
     }
 
     // get the sqlite connection, and execute each part of the comparison
-    let sqlite_pool = self::get_sqlite_connection(log).await;
+    let sqlite_pool = self::get_connection(log).await;
 
     let comparison_data = ComparisonData::new(
         get_unique_rows(

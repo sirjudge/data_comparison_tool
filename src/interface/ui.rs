@@ -1,13 +1,15 @@
 use crate::{
-    interface::state::{
-        UIState,
-        get_string_from_state
+    interface::{
+        state::{
+            UIState,
+            get_string_from_state
+        },
+        log::Log,
     },
     models::{
         argument_parser,
         comparison_data::ComparisonData
     },
-    log::Log,
     processor,
 };
 

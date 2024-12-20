@@ -1,5 +1,5 @@
 use crate::{
-    log::Log,
+    interface::log::Log,
     models::{
         argument_parser::OutputFileType,
         comparison_data::ComparisonData

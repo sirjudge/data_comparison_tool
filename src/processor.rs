@@ -10,7 +10,7 @@ use crate::{
         comparison_data::ComparisonData,
         argument_parser
     },
-    log::Log,
+    interface::log::Log,
     data_querier,
     data_exporter
 };
@@ -85,7 +85,17 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
 
     // compare the data
     now = SystemTime::now();
-    let result = block_on(sqlite::compare_sqlite_tables(&table_1_data,&table_2_data, args.create_sqlite_comparison_files, args.in_memory_sqlite, log, args.auto_yes));
+    let result =
+        block_on(
+            sqlite::compare_tables_sqlite(
+                &table_1_data,
+                &table_2_data,
+                args.create_sqlite_comparison_files,
+                args.in_memory_sqlite,
+                log,
+                args.auto_yes
+            )
+        );
 
     match now.elapsed(){
         Ok(elapsed) => {

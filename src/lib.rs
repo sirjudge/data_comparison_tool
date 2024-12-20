@@ -12,11 +12,12 @@ pub mod models {
 pub mod interface {
     pub mod ui;
     pub mod state;
+    pub mod log_options;
+    pub mod log;
 }
 
 pub mod data_creator;
 pub mod data_exporter;
 pub mod data_querier;
-pub mod log;
 pub mod processor;
 

@@ -1,7 +1,7 @@
 use rand::{ thread_rng, Rng};
 use crate::{
     database::mysql::get_mysql_connection,
-    log::Log
+    interface::log::Log,
 };
 
 /// Create a new table in the mysql database and populate it with random data

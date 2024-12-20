@@ -1,9 +1,9 @@
 use crate::{
-    log::Log,
+    interface::log::Log,
     models::table_data::TableData,
     database::{
-        mysql,
-        sqlite::get_sqlite_connection
+        sqlite,
+        mysql
     },
 };
 
@@ -41,7 +41,7 @@ pub(crate) async fn mysql_table_to_sqlite_table(
     log: &Log,
 ) {
     // open a new sqlite connection and execute the create statment
-    let sqlite_pool = get_sqlite_connection(log).await;
+    let sqlite_pool = sqlite::get_connection(log).await;
 
     // if we've built the new sqlite table
     if create_new_sqlite_table(mysql_rows, &sqlite_pool, &table_data.table_name).await {

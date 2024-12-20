@@ -1,5 +1,5 @@
 use crate::{
-    log::Log,
+    interface::log::Log,
     models::table_data::TableData
 };
 use sqlx::{
