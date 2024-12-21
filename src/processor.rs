@@ -1,18 +1,19 @@
 use async_std::task::block_on;
 use std::time::SystemTime;
 use crate::{
-    data_creator,
     datastore::{
         mysql,
-        sqlite
+        sqlite,
+        csv,
+        generator
     },
     models::comparison_data::ComparisonData,
     interface::{
         log::Log,
         argument_parser,
+        argument_parser::OutputFileType
     },
-    data_querier,
-    data_exporter
+    data_querier
 };
 
 pub fn run_comparison(args: &argument_parser::Arguments, log: &Log) -> ComparisonData {
@@ -30,7 +31,15 @@ pub fn run_comparison(args: &argument_parser::Arguments, log: &Log) -> Compariso
     let result = compare_data(args, log);
 
     if !args.output_file_name.is_empty() {
-        data_exporter::export_data(&result, &args.output_file_name, &args.output_file_type, log);
+        log.info(&format!("exporting data to file: {}", args.output_file_name));
+        match args.output_file_type {
+            OutputFileType::Csv => {
+                csv::export_to_csv(&result, &args.output_file_name, log);
+            }
+            OutputFileType::Json => {
+                panic!("JSON export not implemented yet");
+            }
+        }
     }
 
     result
@@ -118,7 +127,7 @@ fn generate_data(args: &argument_parser::Arguments, log: &Log){
 
     log.info("data creation underway");
     let mut now = SystemTime::now();
-    block_on(data_creator::create_new_data(args.number_of_rows_to_generate, &args.table_name_1, log));
+    block_on(generator::create_new_mysql_data(args.number_of_rows_to_generate, &args.table_name_1, log));
     match now.elapsed(){
         Ok(elapsed) => {
             let log_message = format!("Time it took to create data: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
@@ -132,7 +141,7 @@ fn generate_data(args: &argument_parser::Arguments, log: &Log){
     log.info("starting second data generation");
     now = SystemTime::now();
 
-    block_on(data_creator::create_new_data(args.number_of_rows_to_generate, &args.table_name_2, log));
+    block_on(generator::create_new_mysql_data(args.number_of_rows_to_generate, &args.table_name_2, log));
     match now.elapsed(){
         Ok(elapsed) => {
             let log_message = format!("Time it took to create 2nd table: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());

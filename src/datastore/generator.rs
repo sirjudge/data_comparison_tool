@@ -5,7 +5,7 @@ use crate::{
 };
 
 /// Create a new table in the mysql database and populate it with random data
-pub(crate) async fn create_new_data(num_rows_to_generate: i32, table_name: &str, log: &Log){
+pub(crate) async fn create_new_mysql_data(num_rows_to_generate: i32, table_name: &str, log: &Log){
     let pool = get_mysql_connection("test", log).await;
     let create_new_table_query = format!(
         "CREATE TABLE IF NOT EXISTS {}

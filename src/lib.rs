@@ -2,6 +2,7 @@ pub mod datastore {
     pub mod mysql;
     pub mod sqlite;
     pub mod csv;
+    pub mod generator;
 }
 
 pub mod models {
@@ -17,8 +18,6 @@ pub mod interface {
     pub mod log;
 }
 
-pub mod data_creator;
-pub mod data_exporter;
 pub mod data_querier;
 pub mod processor;
 
