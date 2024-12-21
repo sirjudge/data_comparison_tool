@@ -1,7 +1,7 @@
 use crate::{
     interface::log::Log,
     models::comparison_data::ComparisonData,
-    datastore::sqlite::sqlite_row_to_string_vec,
+    datastore::transformer::sqlite_row_to_string_vec,
 };
 
 pub fn export_to_csv(result: &ComparisonData, output_file_name: &str, log: &Log) {

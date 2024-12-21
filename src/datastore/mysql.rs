@@ -7,13 +7,34 @@ use sqlx::{
     Pool,
     mysql::{
         MySqlPoolOptions,
-        MySql
+        MySql,
+        MySqlRow,
     }
 };
 use std::env;
 
 
-/// open a connection to the mysql databse
+/// open a connection to the mysql databse, executes the query and then
+/// returns a vector of the rows returned
+pub(crate) async fn query_mysql(query_string: &str, database: &str, log: &Log) -> Vec<MySqlRow> {
+    // open a connection to the test db and execute the query
+    let pool = get_mysql_connection(database, log).await;
+    let rows = sqlx::query(query_string).fetch_all(&pool).await;
+
+    // if no errors return and rows isn't empty then return those rows, otherwise panic
+    match rows {
+        Ok(rows) => {
+            if rows.is_empty() {
+                panic!("no rows returned");
+            }
+            rows
+        },
+        Err(error) => {
+            panic!("error: {:?}", error);
+        },
+    }
+}
+
 pub(crate) async fn get_mysql_connection(database_name: &str, log: &Log) -> Pool<MySql> {
     let database_name_override = "ComparisonData";
     // BUG: the connection string is definitely an env variable but is not being populated

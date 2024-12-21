@@ -1,9 +1,18 @@
 use rand::{ thread_rng, Rng};
 use crate::{
-    datastore::mysql::get_mysql_connection,
+    datastore::{
+        mysql::get_mysql_connection,
+        transformer::mysql_type_to_sqlite_type
+    },
     interface::log::Log,
 };
-
+use sqlx::{
+    Pool,
+    mysql::MySqlRow,
+    Row,
+    Column,
+    TypeInfo
+};
 /// Create a new table in the mysql database and populate it with random data
 pub(crate) async fn create_new_mysql_data(num_rows_to_generate: i32, table_name: &str, log: &Log){
     let pool = get_mysql_connection("test", log).await;
@@ -77,3 +86,32 @@ fn random_string(len: usize) -> String {
     result
 }
 
+// generates a new sqlite table from a passed in mysql row
+pub async fn create_new_sqlite_table(
+    mysql_rows: &[MySqlRow],
+    sqlite_pool: &Pool<sqlx::Sqlite>,
+    table_name: &str,
+) -> bool {
+    let mut create_query = format!("create table if not exists {} (", table_name);
+
+    // for each column in the first mysql row generate the column name and type
+    for column in mysql_rows[0].columns() {
+        create_query.push_str(column.name());
+        create_query.push(' ');
+        create_query.push_str(&mysql_type_to_sqlite_type(column.type_info().name()));
+        create_query.push(',');
+    }
+
+    // pop the last char off the string (,) and insert closing parens
+    create_query.pop();
+    create_query.push(')');
+
+    // execute and return the result
+    let result = sqlx::query(create_query.as_str()).execute(sqlite_pool).await;
+    match result {
+        Ok(_) => true,
+        Err(error) => {
+            panic!("error occurred while generating the new sqlite table: {:?}", error);
+        },
+    }
+}

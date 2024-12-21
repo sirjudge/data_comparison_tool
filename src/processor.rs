@@ -5,7 +5,8 @@ use crate::{
         mysql,
         sqlite,
         csv,
-        generator
+        generator,
+        transformer
     },
     models::comparison_data::ComparisonData,
     interface::{
@@ -13,7 +14,6 @@ use crate::{
         argument_parser,
         argument_parser::OutputFileType
     },
-    data_querier
 };
 
 pub fn run_comparison(args: &argument_parser::Arguments, log: &Log) -> ComparisonData {
@@ -64,11 +64,11 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
 
     // generate the select statements + return the rows generated from the select statement
     let database_name = "test";
-    let mysql_rows_1= block_on(data_querier::query_mysql(&query_1,database_name, log));
-    let mysql_rows_2 = block_on(data_querier::query_mysql(&query_2, database_name, log));
+    let mysql_rows_1= block_on(mysql::query_mysql(&query_1,database_name, log));
+    let mysql_rows_2 = block_on(mysql::query_mysql(&query_2, database_name, log));
 
     let mut now = SystemTime::now();
-    block_on(data_querier::mysql_table_to_sqlite_table(&mysql_rows_1, &table_1_data, log));
+    block_on(transformer::mysql_table_to_sqlite_table(&mysql_rows_1, &table_1_data, log));
     match now.elapsed(){
         Ok(elapsed) => {
             let log_message = format!("Time it took to migrate data to sqlite for table 1: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
@@ -81,7 +81,7 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
     }
 
     now = SystemTime::now();
-    block_on(data_querier::mysql_table_to_sqlite_table(&mysql_rows_2, &table_2_data, log));
+    block_on(transformer::mysql_table_to_sqlite_table(&mysql_rows_2, &table_2_data, log));
     match now.elapsed(){
         Ok(elapsed) => {
             let log_message = format!("Time it took to migrate data to sqlite for table 2: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
@@ -130,15 +130,16 @@ fn generate_data(args: &argument_parser::Arguments, log: &Log){
     block_on(generator::create_new_mysql_data(args.number_of_rows_to_generate, &args.table_name_1, log));
     match now.elapsed(){
         Ok(elapsed) => {
+            // implement a profiling system to only measure if that flag is set
             let log_message = format!("Time it took to create data: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
-            log.info(&log_message);
+            log.debug(&log_message);
         }
         Err(e) => {
             panic!("An error occured: {:?}", e);
         }
     }
 
-    log.info("starting second data generation");
+    log.debug("starting second data generation");
     now = SystemTime::now();
 
     block_on(generator::create_new_mysql_data(args.number_of_rows_to_generate, &args.table_name_2, log));

@@ -3,6 +3,7 @@ pub mod datastore {
     pub mod sqlite;
     pub mod csv;
     pub mod generator;
+    pub mod transformer;
 }
 
 pub mod models {
@@ -18,6 +19,5 @@ pub mod interface {
     pub mod log;
 }
 
-pub mod data_querier;
 pub mod processor;
 
