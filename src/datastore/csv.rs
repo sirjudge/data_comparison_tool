@@ -4,7 +4,7 @@ use crate::{
     datastore::transformer::sqlite_row_to_string_vec,
 };
 
-pub fn export_to_csv(result: &ComparisonData, output_file_name: &str, log: &Log) {
+pub fn export_comparison_data_to_csv(result: &ComparisonData, output_file_name: &str, log: &Log) {
     if !result.unique_table_1_rows.is_empty() {
         let unique_table_1_row_file_name = format!("unique_table_1_rows_{}", output_file_name);
         let mut unique_writer = csv::Writer::from_path(unique_table_1_row_file_name).unwrap();

@@ -1,6 +1,5 @@
 use sqlx::mysql::MySqlColumn;
 
-
 /// Struct to hold the table properties to pass over to the sqlite querier
 pub struct TableData {
     /// name of the table you're querying

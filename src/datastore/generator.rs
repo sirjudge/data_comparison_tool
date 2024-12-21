@@ -1,10 +1,16 @@
+use async_std::task::block_on;
 use rand::{ thread_rng, Rng};
+use std::time::SystemTime;
 use crate::{
     datastore::{
         mysql::get_mysql_connection,
-        transformer::mysql_type_to_sqlite_type
+        transformer::mysql_type_to_sqlite_type,
+        generator
     },
-    interface::log::Log,
+    interface::{
+        log::Log,
+        argument_parser
+    },
 };
 use sqlx::{
     Pool,
@@ -13,6 +19,44 @@ use sqlx::{
     Column,
     TypeInfo
 };
+
+
+/// if args.generate_data is set then generate the data for the two tables
+pub fn generate_data(args: &argument_parser::Arguments, log: &Log){
+    if !args.generate_data {
+        log.info("skipping data generation");
+        return
+    };
+
+    log.debug("data creation underway");
+    let mut now = SystemTime::now();
+    block_on(generator::create_new_mysql_data(args.number_of_rows_to_generate, &args.table_name_1, log));
+    match now.elapsed(){
+        Ok(elapsed) => {
+            // implement a profiling system to only measure if that flag is set
+            let log_message = format!("Time it took to create data: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
+            log.debug(&log_message);
+        }
+        Err(e) => {
+            panic!("An error occured: {:?}", e);
+        }
+    }
+
+    log.debug("starting second data generation");
+    now = SystemTime::now();
+
+    block_on(generator::create_new_mysql_data(args.number_of_rows_to_generate, &args.table_name_2, log));
+    match now.elapsed(){
+        Ok(elapsed) => {
+            let log_message = format!("Time it took to create 2nd table: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
+            log.debug(&log_message);
+        }
+        Err(e) => {
+            panic!("An error occured: {:?}", e);
+        }
+    }
+}
+
 /// Create a new table in the mysql database and populate it with random data
 pub(crate) async fn create_new_mysql_data(num_rows_to_generate: i32, table_name: &str, log: &Log){
     let pool = get_mysql_connection("test", log).await;
@@ -76,18 +120,21 @@ fn random_long(max: i32) -> i32 {
     thread_rng().gen_range(1..max)
 }
 
-/// using thread_rng and a vector of characters generate a random string of length len
+/// using thread_rng and a vector of
+/// characters generate a random string of length len
 fn random_string(len: usize) -> String {
     let characters: Vec<char> = "abcdefghijklmnopqrstuvwxyz".chars().collect();
     let mut result = String::new();
     for _ in 0..len {
-        result.push(characters[thread_rng().gen_range(0..characters.len())]);
+        result.push(
+            characters[thread_rng().gen_range(0..characters.len())]
+        );
     }
     result
 }
 
 // generates a new sqlite table from a passed in mysql row
-pub async fn create_new_sqlite_table(
+pub async fn export_mysql_rows_to_sqlite_table(
     mysql_rows: &[MySqlRow],
     sqlite_pool: &Pool<sqlx::Sqlite>,
     table_name: &str,

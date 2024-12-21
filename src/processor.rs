@@ -20,7 +20,7 @@ pub fn run_comparison(args: &argument_parser::Arguments, log: &Log) -> Compariso
     // if the generate data flag is set then generate the data
     // for the two tables passed in
     if args.generate_data {
-        generate_data(args, log);
+        generator::generate_data(args, log);
         log.info(&format!("Generated {} rows for each table", args.number_of_rows_to_generate));
     }
 
@@ -37,7 +37,7 @@ pub fn run_comparison(args: &argument_parser::Arguments, log: &Log) -> Compariso
         log.info(&format!("exporting data to file: {}", args.output_file_name));
         match args.output_file_type {
             OutputFileType::Csv => {
-                csv::export_to_csv(&result, &args.output_file_name, log);
+                csv::export_comparison_data_to_csv(&result, &args.output_file_name, log);
             }
             OutputFileType::Json => {
                 panic!("JSON export not implemented yet");
@@ -121,38 +121,3 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
     result
 }
 
-/// if args.generate_data is set then generate the data for the two tables
-fn generate_data(args: &argument_parser::Arguments, log: &Log){
-    if !args.generate_data {
-        log.info("skipping data generation");
-        return
-    };
-
-    log.debug("data creation underway");
-    let mut now = SystemTime::now();
-    block_on(generator::create_new_mysql_data(args.number_of_rows_to_generate, &args.table_name_1, log));
-    match now.elapsed(){
-        Ok(elapsed) => {
-            // implement a profiling system to only measure if that flag is set
-            let log_message = format!("Time it took to create data: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
-            log.debug(&log_message);
-        }
-        Err(e) => {
-            panic!("An error occured: {:?}", e);
-        }
-    }
-
-    log.debug("starting second data generation");
-    now = SystemTime::now();
-
-    block_on(generator::create_new_mysql_data(args.number_of_rows_to_generate, &args.table_name_2, log));
-    match now.elapsed(){
-        Ok(elapsed) => {
-            let log_message = format!("Time it took to create 2nd table: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
-            log.debug(&log_message);
-        }
-        Err(e) => {
-            panic!("An error occured: {:?}", e);
-        }
-    }
-}
