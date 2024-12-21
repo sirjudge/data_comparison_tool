@@ -10,7 +10,7 @@ services:
     environment:
       - MYSQL_ROOT_HOSTS=%
       - MYSQL_DATABASE=ComparisonData
-      - MYSQL_ALLOW_EMPTY_PASSWORD=1
+      - MYSQL_ALLOW_EMPTY_PASSWORD=0
       - MYSQL_ROOT_PASSWORD=passw0rd
       - MYSQL_USER=nico
       - MYSQL_PASSWORD=RealPassw0rd

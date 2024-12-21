@@ -16,9 +16,9 @@ use std::env;
 
 /// open a connection to the mysql databse, executes the query and then
 /// returns a vector of the rows returned
-pub(crate) async fn query_mysql(query_string: &str, database: &str, log: &Log) -> Vec<MySqlRow> {
+pub(crate) async fn query(query_string: &str, database: &str, log: &Log) -> Vec<MySqlRow> {
     // open a connection to the test db and execute the query
-    let pool = get_mysql_connection(database, log).await;
+    let pool = get_connection(database, log).await;
     let rows = sqlx::query(query_string).fetch_all(&pool).await;
 
     // if no errors return and rows isn't empty then return those rows, otherwise panic
@@ -35,7 +35,7 @@ pub(crate) async fn query_mysql(query_string: &str, database: &str, log: &Log) -
     }
 }
 
-pub(crate) async fn get_mysql_connection(database_name: &str, log: &Log) -> Pool<MySql> {
+pub(crate) async fn get_connection(database_name: &str, log: &Log) -> Pool<MySql> {
     let database_name_override = "ComparisonData";
     // BUG: the connection string is definitely an env variable but is not being populated
     // correctly.
@@ -73,8 +73,8 @@ pub(crate) async fn get_mysql_connection(database_name: &str, log: &Log) -> Pool
 
 /// given a table now select 1 row from the table and extract
 /// a list of columns and the primary key
-pub(crate) async fn get_mysql_table_data(table_name: &str, log: &Log) -> TableData {
-    let pool = get_mysql_connection("ComparisonData", log).await;
+pub(crate) async fn get_table_data(table_name: &str, log: &Log) -> TableData {
+    let pool = get_connection("ComparisonData", log).await;
     let select_query = format!("select * from {} limit 1", table_name);
 
     //BUG: when using `cargo test` this query is failing to look up the table

@@ -3,7 +3,7 @@ use rand::{ thread_rng, Rng};
 use std::time::SystemTime;
 use crate::{
     datastore::{
-        mysql::get_mysql_connection,
+        mysql::get_connection,
         transformer::mysql_type_to_sqlite_type,
         generator
     },
@@ -30,7 +30,7 @@ pub fn generate_data(args: &argument_parser::Arguments, log: &Log){
 
     log.debug("data creation underway");
     let mut now = SystemTime::now();
-    block_on(generator::create_new_mysql_data(args.number_of_rows_to_generate, &args.table_name_1, log));
+    block_on(generator::create_new_mysql_table_data(args.number_of_rows_to_generate, &args.table_name_1, log));
     match now.elapsed(){
         Ok(elapsed) => {
             // implement a profiling system to only measure if that flag is set
@@ -45,7 +45,8 @@ pub fn generate_data(args: &argument_parser::Arguments, log: &Log){
     log.debug("starting second data generation");
     now = SystemTime::now();
 
-    block_on(generator::create_new_mysql_data(args.number_of_rows_to_generate, &args.table_name_2, log));
+    //block_on(generator::create_new_mysql_table_data(args.number_of_rows_to_generate, &args.table_name_2, log));
+    block_on(generator::create_new_mysql_table_data(args.number_of_rows_to_generate, &args.table_name_2, log));
     match now.elapsed(){
         Ok(elapsed) => {
             let log_message = format!("Time it took to create 2nd table: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
@@ -57,9 +58,8 @@ pub fn generate_data(args: &argument_parser::Arguments, log: &Log){
     }
 }
 
-/// Create a new table in the mysql database and populate it with random data
-pub(crate) async fn create_new_mysql_data(num_rows_to_generate: i32, table_name: &str, log: &Log){
-    let pool = get_mysql_connection("test", log).await;
+pub async fn create_new_mysql_table_data(num_rows_to_generate: i32, table_name: &str, log: &Log){
+    let pool = get_connection("test", log).await;
     let create_new_table_query = format!(
         "CREATE TABLE IF NOT EXISTS {}
         (
@@ -113,7 +113,6 @@ pub(crate) async fn create_new_mysql_data(num_rows_to_generate: i32, table_name:
         }
     }
 }
-
 
 /// using thread_rng generate a random number between 1 and max
 fn random_long(max: i32) -> i32 {

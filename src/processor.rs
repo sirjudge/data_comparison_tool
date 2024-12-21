@@ -50,8 +50,8 @@ pub fn run(args: &argument_parser::Arguments, log: &Log) -> ComparisonData {
 
 fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData {
     // extract mysql data ino the table data struct
-    let table_1_data = block_on(mysql::get_mysql_table_data(&args.table_name_1, log));
-    let table_2_data = block_on(mysql::get_mysql_table_data(&args.table_name_2, log));
+    let table_1_data = block_on(mysql::get_table_data(&args.table_name_1, log));
+    let table_2_data = block_on(mysql::get_table_data(&args.table_name_2, log));
 
     // declare query_1 and query_2 variables but don't give them a value
     let mut query_1 = args.mysql_query_1.clone();
@@ -67,8 +67,8 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
 
     // generate the select statements + return the rows generated from the select statement
     let database_name = "test";
-    let mysql_rows_1= block_on(mysql::query_mysql(&query_1,database_name, log));
-    let mysql_rows_2 = block_on(mysql::query_mysql(&query_2, database_name, log));
+    let mysql_rows_1= block_on(mysql::query(&query_1,database_name, log));
+    let mysql_rows_2 = block_on(mysql::query(&query_2, database_name, log));
 
     let mut now = SystemTime::now();
     block_on(transformer::mysql_table_to_sqlite_table(&mysql_rows_1, &table_1_data, log));
