@@ -16,7 +16,7 @@ use crate::{
     },
 };
 
-pub fn run_comparison(args: &argument_parser::Arguments, log: &Log) -> ComparisonData {
+pub fn run(args: &argument_parser::Arguments, log: &Log) -> ComparisonData {
     // if the generate data flag is set then generate the data
     // for the two tables passed in
     if args.generate_data {

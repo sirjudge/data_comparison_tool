@@ -58,7 +58,7 @@ pub(crate) async fn mysql_table_to_sqlite_table(
     let sqlite_pool = sqlite::get_connection(log).await;
 
     // if we've built the new sqlite table
-    if generator::export_mysql_rows_to_sqlite_table(mysql_rows, &sqlite_pool, &table_data.table_name).await {
+    if generator::export_mysql_rows_to_sqlite_table(mysql_rows, &sqlite_pool, &table_data.table_name, log).await {
         log.info(&format!("created new sqlite table: {}", &table_data.table_name));
 
         // generate the insert query and run it

@@ -41,6 +41,10 @@ impl Log {
         }
     }
 
+    pub fn set_verbose(&mut self, verbose: LogVerbosity) {
+        self.verbose = verbose;
+    }
+
     /// opens a new file in append mode if the file exists or create a new
     /// file if it doesn't
     fn open_file(&self) -> File {

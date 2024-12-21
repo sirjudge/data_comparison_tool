@@ -39,8 +39,8 @@ pub(crate) async fn get_mysql_connection(database_name: &str, log: &Log) -> Pool
     let database_name_override = "ComparisonData";
     // BUG: the connection string is definitely an env variable but is not being populated
     // correctly.
-    log.debug("attempting to get mysql connection string from env var");
-    log.debug(&format!("env vars: {:?}", env::vars()));
+    // log.debug("attempting to get mysql connection string from env var");
+    // log.debug(&format!("env vars: {:?}", env::vars()));
 
     let connection_string_env_var = env::var("MYSQL_CONNECTION_STRING_USER");
     let mysql_connection_string = match connection_string_env_var {
