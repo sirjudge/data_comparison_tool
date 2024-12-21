@@ -13,7 +13,6 @@ jobs:
     - uses: actions/checkout@v4
     - name: Build
       run: cargo build --verbose
-    - name: configure docker
-      run: make docker-build
     - name: Run tests
+      run: make docker-build
       run: cargo test --verbose
