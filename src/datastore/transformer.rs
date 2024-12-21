@@ -1,36 +1,50 @@
 use crate::{
-    log::Log,
+    interface::log::Log,
     models::table_data::TableData,
-    database::{
-        mysql,
-        sqlite::get_sqlite_connection
-    },
+    datastore::{
+        sqlite,
+        generator
+    }
 };
 
 use sqlx::{
     mysql::MySqlRow,
-    Column, Pool, Row, TypeInfo,
+    sqlite::SqliteRow,
+    Row,
+    Column,
+    TypeInfo
 };
 
-/// open a connection to the mysql databse, executes the query and then
-/// returns a vector of the rows returned
-pub(crate) async fn query_mysql(query_string: &str, database: &str, log: &Log) -> Vec<MySqlRow> {
-    // open a connection to the test db and execute the query
-    let pool = mysql::get_mysql_connection(database, log).await;
-    let rows = sqlx::query(query_string).fetch_all(&pool).await;
-
-    // if no errors return and rows isn't empty then return those rows, otherwise panic
-    match rows {
-        Ok(rows) => {
-            if rows.is_empty() {
-                panic!("no rows returned");
+pub fn sqlite_row_to_string_vec(row:&SqliteRow, log: &Log) -> Vec<String> {
+    // convert sqliteRow to csv row
+    let mut csv_row = Vec::new();
+    let number_of_columns = row.columns().len();
+    for i in 0..number_of_columns {
+        let column_type = row.column(i).type_info().to_string();
+        match column_type.as_str() {
+            "TEXT" => {
+                let value: String = row.get(i);
+                csv_row.push(value);
             }
-            rows
-        },
-        Err(error) => {
-            panic!("error: {:?}", error);
-        },
+            "INTEGER" => {
+                let value: i64 = row.get(i);
+                csv_row.push(value.to_string());
+            }
+            "REAL" => {
+                let value: f64 = row.get(i);
+                csv_row.push(value.to_string());
+            }
+            "BLOB" => {
+                let value: String = row.get(i);
+                csv_row.push(value);
+            }
+            _ => {
+                log.error(&format!("unknown column type: {}", column_type));
+            }
+        }
     }
+    // finally return csv row
+    csv_row
 }
 
 /// Converts a batch of MySql rows to a sqlite new sqlite table
@@ -41,14 +55,14 @@ pub(crate) async fn mysql_table_to_sqlite_table(
     log: &Log,
 ) {
     // open a new sqlite connection and execute the create statment
-    let sqlite_pool = get_sqlite_connection(log).await;
+    let sqlite_pool = sqlite::get_connection(log).await;
 
     // if we've built the new sqlite table
-    if create_new_sqlite_table(mysql_rows, &sqlite_pool, &table_data.table_name).await {
+    if generator::export_mysql_rows_to_sqlite_table(mysql_rows, &sqlite_pool, &table_data.table_name).await {
         log.info(&format!("created new sqlite table: {}", &table_data.table_name));
 
         // generate the insert query and run it
-        let insert_query = create_sqlite_insert_query(mysql_rows, &table_data.table_name);
+        let insert_query = create_sqlite_insert_query_from_mysql_row(mysql_rows, &table_data.table_name);
         let result = sqlx::query(insert_query.as_str()).execute(&sqlite_pool).await;
 
         match result {
@@ -62,40 +76,8 @@ pub(crate) async fn mysql_table_to_sqlite_table(
     }
 }
 
-// generates a new sqlite table from a passed in mysql row
-async fn create_new_sqlite_table(
-    mysql_rows: &[MySqlRow],
-    sqlite_pool: &Pool<sqlx::Sqlite>,
-    table_name: &str,
-) -> bool {
-    // extract table information
-    // init insert query string
-    let mut create_query = format!("create table if not exists {} (", table_name);
-
-    // for each column in the first mysql row generate the column name and type
-    for column in mysql_rows[0].columns() {
-        create_query.push_str(column.name());
-        create_query.push(' ');
-        create_query.push_str(&mysql_type_to_sqlite_type(column.type_info().name()));
-        create_query.push(',');
-    }
-
-    // pop the last char off the string (,) and insert closing parens
-    create_query.pop();
-    create_query.push(')');
-
-    // execute and return the result
-    let result = sqlx::query(create_query.as_str()).execute(sqlite_pool).await;
-    match result {
-        Ok(_) => true,
-        Err(error) => {
-            panic!("error occurred while generating the new sqlite table: {:?}", error);
-        },
-    }
-}
-
 // generates a new sqlite insert query from a passed in mysql row
-fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> String {
+fn create_sqlite_insert_query_from_mysql_row(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> String {
     // for each row in mysql generate the insert statement
     let mut insert_query = format!("insert into {} (", table_name);
 
@@ -117,7 +99,7 @@ fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> S
             let column_name = column.name();
             let column_type = column.type_info().name();
 
-            // TODO: add support for datetime
+            // TODO: add support for other column types here
             match column_type {
                 "INT" => {
                     let value: i32 = row.get(column_name);
@@ -138,6 +120,7 @@ fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> S
                 },
             }
         }
+
         // remove trailing comma and add closing parens
         value_insert_string.pop();
         value_insert_string.push_str("),");
@@ -149,8 +132,8 @@ fn create_sqlite_insert_query(mysql_rows: &Vec<MySqlRow>, table_name: &str) -> S
     insert_query
 }
 
-fn mysql_type_to_sqlite_type(mysql_type: &str) -> String {
-    //TODO: add support for datetime
+pub fn mysql_type_to_sqlite_type(mysql_type: &str) -> String {
+    //TODO: add support for other column types here
     match mysql_type {
         "INT" => "INTEGER".to_string(),
         "VARCHAR" => "TEXT".to_string(),

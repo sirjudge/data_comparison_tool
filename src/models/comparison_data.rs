@@ -1,5 +1,3 @@
-
-
 /// Struct to hold the comparison data between the two tables
 pub struct ComparisonData {
     /// Rows that are unique to the first table and do not exist in the second

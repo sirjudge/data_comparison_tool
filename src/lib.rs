@@ -1,22 +1,23 @@
-pub mod database {
+pub mod datastore {
     pub mod mysql;
     pub mod sqlite;
+    pub mod csv;
+    pub mod generator;
+    pub mod transformer;
 }
 
 pub mod models {
-    pub mod argument_parser;
     pub mod comparison_data;
     pub mod table_data;
 }
 
 pub mod interface {
-    pub mod ui;
+    pub mod argument_parser;
+    pub mod tui;
     pub mod state;
+    pub mod log_options;
+    pub mod log;
 }
 
-pub mod data_creator;
-pub mod data_exporter;
-pub mod data_querier;
-pub mod log;
 pub mod processor;
 

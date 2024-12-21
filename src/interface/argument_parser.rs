@@ -1,16 +1,10 @@
 use chrono::Local;
 use std::process::exit;
+use crate::interface::log_options::LogOutput;
 
 pub enum OutputFileType {
     Csv,
     Json
-}
-
-#[derive(Clone)]
-pub enum LogOutput {
-    StdOut,
-    File,
-    Console
 }
 
 /// Struct to hold the arguments passed in from the command line
@@ -116,8 +110,13 @@ impl Arguments {
             auto_yes: false,
             output_file_name: "".to_string(),
             output_file_type: OutputFileType::Csv,
-            log_output: LogOutput::File
+            log_output: LogOutput::Console
         };
+
+        if std::env::args().len() == 1 {
+            println!("No args passed in, running with default args");
+            return return_arguments;
+        }
 
         // loop over each argument
         // first argument is the name of the program so we can ignore it

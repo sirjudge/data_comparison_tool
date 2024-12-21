@@ -3,7 +3,10 @@ use std::{
     io::{Write,Error},
     path::Path
 };
-use crate:: models::argument_parser::{Arguments, LogOutput};
+use crate::interface::{
+    log_options::{LogVerbosity, LogOutput},
+    argument_parser::Arguments,
+};
 
 /// creates a log file and returns the generated log file name
 fn create_log_file() -> Result<String, Error> {
@@ -24,30 +27,35 @@ fn create_log_file() -> Result<String, Error> {
 }
 
 pub struct Log {
-    log_file_name: String,
-    log_type: LogOutput
+    pub log_file_name: String,
+    pub log_type: LogOutput,
+    pub verbose: LogVerbosity
 }
 
 impl Log {
     pub fn new(args:&Arguments) -> Log {
         Log {
             log_file_name: create_log_file().unwrap(),
-            log_type: args.log_output.clone()
+            log_type: args.log_output.clone(),
+            verbose: LogVerbosity::Info
         }
     }
 
+    /// opens a new file in append mode if the file exists or create a new
+    /// file if it doesn't
     fn open_file(&self) -> File {
         if Path::new(&self.log_file_name).exists() {
-                OpenOptions::new()
+            OpenOptions::new()
                 .append(true)
                 .open(&self.log_file_name)
                 .unwrap()
         }
         else {
-                File::create(&self.log_file_name).unwrap()
+            File::create(&self.log_file_name).unwrap()
         }
     }
 
+    /// appends a given string to the file found in the path provided
     fn append_to_file(&self,log_message: &str, log_file: &mut File) {
         match log_file.write_all(log_message.as_bytes()) {
             Ok(_) => {
@@ -65,7 +73,31 @@ impl Log {
 
     }
 
+    /// print debug message to the configured output if the verbosity is set
+    /// to debug or above
+    pub fn debug(&self, message: &str) {
+        if self.verbose.clone() as i32 > LogVerbosity::Debug as i32 {
+            return;
+        }
+
+        match self.log_type {
+            LogOutput::StdOut | LogOutput::Console  => {
+                println!("<DEBUG>{}", message);
+            }
+            LogOutput::File => {
+                let mut log_file = self.open_file();
+                self.append_to_file(&format!("<DEBUG>{}\n",message), &mut log_file);
+            }
+        }
+    }
+
+    /// print info message to the configured output if the verbosity is set
+    /// to info or above
     pub fn info(&self, message: &str) {
+        if self.verbose.clone() as i32 > LogVerbosity::Info as i32 {
+            return;
+        }
+
         match self.log_type {
             LogOutput::StdOut | LogOutput::Console  => {
                 println!("<INFO>{}", message);
@@ -77,12 +109,17 @@ impl Log {
         }
     }
 
+    /// print warning message to the configured output if the verbosity is set
+    /// to warning or above
     pub fn warn(&self, message: &str) {
+        if self.verbose.clone() as i32 > LogVerbosity::Warning as i32 {
+            return;
+        }
+
         match self.log_type {
-            LogOutput::StdOut |
-                LogOutput::Console  => {
-                    println!("<WARNING>{}", message);
-                }
+            LogOutput::StdOut | LogOutput::Console  => {
+                println!("<WARNING>{}", message);
+            }
             LogOutput::File => {
                 let mut log_file = self.open_file();
                 self.append_to_file(&format!("<WARNING>{}\n",message), &mut log_file);
@@ -90,6 +127,8 @@ impl Log {
         }
     }
 
+    /// print error message to the configured output
+    /// note: we always want to print errors so don't need to check verbosity at this point
     pub fn error(&self, message: &str) {
         match self.log_type {
             LogOutput::StdOut |

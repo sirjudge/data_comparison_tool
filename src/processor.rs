@@ -1,28 +1,32 @@
 use async_std::task::block_on;
 use std::time::SystemTime;
 use crate::{
-    data_creator,
-    database::{
+    datastore::{
         mysql,
-        sqlite
+        sqlite,
+        csv,
+        generator,
+        transformer
     },
-    models::{
-        comparison_data::ComparisonData,
-        argument_parser
+    models::comparison_data::ComparisonData,
+    interface::{
+        log::Log,
+        argument_parser,
+        argument_parser::OutputFileType
     },
-    log::Log,
-    data_querier,
-    data_exporter
 };
 
 pub fn run_comparison(args: &argument_parser::Arguments, log: &Log) -> ComparisonData {
     // if the generate data flag is set then generate the data
     // for the two tables passed in
-    generate_data(args, log);
+    if args.generate_data {
+        generator::generate_data(args, log);
+        log.info(&format!("Generated {} rows for each table", args.number_of_rows_to_generate));
+    }
 
     // if the clean flag is set then clean up the sqlite databses
     if args.clean {
-        block_on(data_creator::clear_sqlite_data());
+        block_on(sqlite::clear_sqlite_data());
         log.info("cleaned sqlite database");
     }
 
@@ -30,7 +34,15 @@ pub fn run_comparison(args: &argument_parser::Arguments, log: &Log) -> Compariso
     let result = compare_data(args, log);
 
     if !args.output_file_name.is_empty() {
-        data_exporter::export_data(&result, &args.output_file_name, &args.output_file_type, log);
+        log.info(&format!("exporting data to file: {}", args.output_file_name));
+        match args.output_file_type {
+            OutputFileType::Csv => {
+                csv::export_comparison_data_to_csv(&result, &args.output_file_name, log);
+            }
+            OutputFileType::Json => {
+                panic!("JSON export not implemented yet");
+            }
+        }
     }
 
     result
@@ -55,11 +67,11 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
 
     // generate the select statements + return the rows generated from the select statement
     let database_name = "test";
-    let mysql_rows_1= block_on(data_querier::query_mysql(&query_1,database_name, log));
-    let mysql_rows_2 = block_on(data_querier::query_mysql(&query_2, database_name, log));
+    let mysql_rows_1= block_on(mysql::query_mysql(&query_1,database_name, log));
+    let mysql_rows_2 = block_on(mysql::query_mysql(&query_2, database_name, log));
 
     let mut now = SystemTime::now();
-    block_on(data_querier::mysql_table_to_sqlite_table(&mysql_rows_1, &table_1_data, log));
+    block_on(transformer::mysql_table_to_sqlite_table(&mysql_rows_1, &table_1_data, log));
     match now.elapsed(){
         Ok(elapsed) => {
             let log_message = format!("Time it took to migrate data to sqlite for table 1: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
@@ -72,7 +84,7 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
     }
 
     now = SystemTime::now();
-    block_on(data_querier::mysql_table_to_sqlite_table(&mysql_rows_2, &table_2_data, log));
+    block_on(transformer::mysql_table_to_sqlite_table(&mysql_rows_2, &table_2_data, log));
     match now.elapsed(){
         Ok(elapsed) => {
             let log_message = format!("Time it took to migrate data to sqlite for table 2: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
@@ -85,7 +97,17 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
 
     // compare the data
     now = SystemTime::now();
-    let result = block_on(sqlite::compare_sqlite_tables(&table_1_data,&table_2_data, args.create_sqlite_comparison_files, args.in_memory_sqlite, log, args.auto_yes));
+    let result =
+        block_on(
+            sqlite::compare_tables(
+                &table_1_data,
+                &table_2_data,
+                args.create_sqlite_comparison_files,
+                args.in_memory_sqlite,
+                log,
+                args.auto_yes
+            )
+        );
 
     match now.elapsed(){
         Ok(elapsed) => {
@@ -99,37 +121,3 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
     result
 }
 
-/// if args.generate_data is set then generate the data for the two tables
-fn generate_data(args: &argument_parser::Arguments, log: &Log){
-    if !args.generate_data {
-        log.info("skipping data generation");
-        return
-    };
-
-    log.info("data creation underway");
-    let mut now = SystemTime::now();
-    block_on(data_creator::create_new_data(args.number_of_rows_to_generate, &args.table_name_1, log));
-    match now.elapsed(){
-        Ok(elapsed) => {
-            let log_message = format!("Time it took to create data: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
-            log.info(&log_message);
-        }
-        Err(e) => {
-            panic!("An error occured: {:?}", e);
-        }
-    }
-
-    log.info("starting second data generation");
-    now = SystemTime::now();
-
-    block_on(data_creator::create_new_data(args.number_of_rows_to_generate, &args.table_name_2, log));
-    match now.elapsed(){
-        Ok(elapsed) => {
-            let log_message = format!("Time it took to create 2nd table: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
-            log.info(&log_message);
-        }
-        Err(e) => {
-            panic!("An error occured: {:?}", e);
-        }
-    }
-}

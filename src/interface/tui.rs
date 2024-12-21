@@ -1,16 +1,15 @@
 use crate::{
-    interface::state::{
-        UIState,
-        get_string_from_state
-    },
-    models::{
+    interface::{
+        state::{
+            UIState,
+            get_string_from_state
+        },
+        log::Log,
         argument_parser,
-        comparison_data::ComparisonData
     },
-    log::Log,
+    models::comparison_data::ComparisonData,
     processor,
 };
-
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Alignment, Constraint, Layout, Rect},
@@ -22,7 +21,6 @@ use ratatui::{
     Frame,
 };
 use std::{io, io::Stdout};
-
 
 /// State management for the UI
 /// I'm aware this may not be the best way to do this
@@ -39,7 +37,7 @@ pub fn set_state(state: UIState, log: &Log) {
         let current_state_string = get_string_from_state(get_state());
         let new_state_string = get_string_from_state(state.clone());
         let log_message = format!("Setting state to: {:?} from: {:?}",new_state_string,current_state_string);
-        log.info(&log_message);
+        log.debug(&log_message);
 
         // current state becomes previous state
         PREVIOUS_STATE = get_state();
@@ -95,7 +93,7 @@ fn draw_and_handle_state(
 ) -> Result<(), std::io::Error> {
     // if state is startup, do start up stuff
     if get_state() == UIState::StartUp {
-        log.info("performing terminal initialization tasks");
+        log.debug("performing terminal initialization tasks");
         set_state(UIState::MainMenu, log);
         terminal.draw(draw_main_menu)?;
         return Ok(());
@@ -103,17 +101,16 @@ fn draw_and_handle_state(
 
     // if the previous state and current state are the same
     if get_prev_state() == get_state() {
-        //TODO: maybe create debug flag or something for logs like this
         let log_message = format!(
             "no state change detected, returning ok. Current state: {}",
             get_string_from_state(get_state())
         );
-        log.info(&log_message);
+        log.debug(&log_message);
         return Ok(());
     }
 
     // generate log message that state has changed
-    log.info(
+    log.debug(
         &format!(
             "State change detected, pev_state:{} current_state:{}",
             get_string_from_state(get_state()),
@@ -127,30 +124,26 @@ fn draw_and_handle_state(
     // match on the current state and render the appropriate new UI
     match get_state() {
         UIState::StartUp | UIState::MainMenu => {
-            log.info("performing terminal initialization tasks");
+            log.debug("performing terminal initialization tasks");
             terminal.draw(draw_main_menu)?;
         }
         UIState::Running => {
-            log.info("Running comparison");
             terminal.draw(draw_running)?;
 
             // TOOD: This should be done in draw_running but is done
             // here to avoid lifetime and ownership conflictions
             let comparison_data = processor::run_comparison(args, log);
             set_comparison_data(comparison_data);
+            log.debug("comparison complete, setting state to results");
             set_state(UIState::Results, log);
-
-            // TODO: This is a hack to get an automatic redraw without having
-            // to accept a keypress after the state change above
             terminal.clear()?;
             terminal.draw(draw_results)?;
-            log.info("comparison is complete, hopefully new Results screen should be visible");
         }
         UIState::Results => {
             terminal.draw(draw_results)?;
         }
         UIState::TearDown => {
-            log.info("Tearing down terminal and quitting");
+            log.debug("Tearing down terminal and quitting");
             terminal.clear()?;
         }
     }
@@ -163,14 +156,12 @@ fn handle_main_menu_keys(key: KeyCode, log: &Log) {
     match key {
         KeyCode::Char('s') => {
             set_state(UIState::Running, log);
-            log.info("setting state to running from main menu key press");
         }
         KeyCode::Char('q') => {
             set_state(UIState::TearDown, log);
-            log.info("setting state to tear down from main menu key press");
         }
         _ => {
-            log.info(&format!(
+            log.warn(&format!(
                 "unrecognized main menu selection Key pressed: {:?}",
                 key
             ));
@@ -182,7 +173,6 @@ fn runtime_key_events(key: KeyCode, log: &Log) {
     match key {
         KeyCode::Char('q') => {
             set_state(UIState::TearDown, log);
-            log.info("setting state to tear down from runtime menu key press");
         }
         _ => {
             log.warn(&format!("unrecognized runtime menu Key pressed: {:?}", key));
@@ -194,11 +184,9 @@ fn result_key_events(key: KeyCode, log: &Log) {
     match key {
         KeyCode::Char('q') => {
             set_state(UIState::TearDown, log);
-            log.info("setting state to tear down from results menu key press");
         }
         KeyCode::Char('m') => {
             set_state(UIState::MainMenu, log);
-            log.info("returning to main menu");
         }
         _ => {
             log.warn(&format!("unrecognized results menu Key pressed: {:?}", key));
@@ -211,10 +199,11 @@ fn result_key_events(key: KeyCode, log: &Log) {
 pub fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::Result<()> {
     // initialize terminal and state of the UI and set the state to main menu
     let mut terminal = ratatui::init();
-    log.info("ratatui Terminal initialized");
-
+    log.debug("ratatui Terminal initialized");
     //BUG: the following key presses cause a crash from a table already existing
     //Main menu > running > results > main menu > running
+    // this is probably an error with the table name for either
+    // mysql or sqlite not being re-initialized
     loop {
         // handle and render the current state and after the state has changed hanlde key events
         match draw_and_handle_state(&mut terminal, log, args) {
