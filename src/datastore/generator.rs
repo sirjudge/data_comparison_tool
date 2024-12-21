@@ -60,6 +60,7 @@ pub fn generate_data(args: &argument_parser::Arguments, log: &Log){
 
 pub async fn create_new_mysql_table_data(num_rows_to_generate: i32, table_name: &str, log: &Log){
     let pool = get_connection("test", log).await;
+    //TODO: This should be more configurable
     let create_new_table_query = format!(
         "CREATE TABLE IF NOT EXISTS {}
         (
@@ -83,6 +84,14 @@ pub async fn create_new_mysql_table_data(num_rows_to_generate: i32, table_name: 
         }
     }
 
+    //OPTIMIZE: this is a really painful thing to see, we should be able to
+    //do this a bit faster than making one huge string as an insert statement
+    //and then executing it. Consider maybe doing this asyncronously
+    //and/or in parallel since order doesn't matter with random data creation
+
+    //TODO: Similar sentement as above
+    // todo: can speed this up by using prepared statement I think and passing data in via
+    // parameterized query
     let mut insert_query =
         format!(
             "INSERT INTO {}

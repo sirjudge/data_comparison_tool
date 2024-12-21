@@ -16,7 +16,7 @@ use sqlx::{
 
 /// Converts a batch of MySql rows to a sqlite new sqlite table
 /// and inserts the rows into the new table
-pub(crate) async fn mysql_table_to_sqlite_table(
+pub async fn mysql_table_to_sqlite_table(
     mysql_rows: &Vec<MySqlRow>,
     table_data: &TableData,
     log: &Log,

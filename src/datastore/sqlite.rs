@@ -7,14 +7,18 @@ use crate::{
 };
 use sqlx::{
     migrate::MigrateDatabase,
-    sqlite::SqlitePoolOptions,
+    sqlite::{
+        SqlitePoolOptions,
+        SqliteRow
+    },
     SqlitePool,
     Column,
+    Row,
     Pool,
 };
 
 /// open a connection to the sqlite database
-pub(crate) async fn get_connection(log: &Log) -> Pool<sqlx::Sqlite> {
+pub async fn get_connection(log: &Log) -> Pool<sqlx::Sqlite> {
     let db_url = "sqlite://./db.sqlite3";
     // check if sqlite database exists and create it if it doesn't
     if !sqlx::Sqlite::database_exists(db_url).await.unwrap() {
@@ -35,8 +39,49 @@ pub(crate) async fn get_connection(log: &Log) -> Pool<sqlx::Sqlite> {
     }
 }
 
+pub async fn drop_table(table_name: &str, log: &Log) {
+    // get the sqlite connection and create the query
+    // to check if the table exists
+    let sqlite_pool = get_connection(log).await;
+    let check_if_table_exists_query = format!(
+        "select count(*) from sqlite_master where type='table' and name='{}'",
+        table_name
+    );
+
+    // query the db and if the table doesn't exist return early else
+    // run the drop table and check if we successfully dropped
+    let result = sqlx::query(check_if_table_exists_query.as_str())
+        .fetch_one(&sqlite_pool)
+        .await;
+    match result {
+        Ok(row) => {
+            let count: i32 = row.get(0);
+            if count == 0 {
+                return;
+            }
+
+            let drop_query = format!("drop table {}", table_name);
+            let result = sqlx::query(drop_query.as_str())
+                .execute(&sqlite_pool)
+                .await;
+
+            match result {
+                Ok(_) => {
+                    log.info(&format!("dropped table: {}", table_name));
+                },
+                Err(error) => {
+                    panic!("error occurred while dropping table: {:?}", error);
+                },
+            }
+        },
+        Err(error) => {
+            panic!("error occurred while checking if table exists: {:?}", error);
+        },
+    }
+}
+
 /// Compare two sqlite tables and return the differences
-pub(crate) async fn compare_tables (
+pub async fn compare_tables (
     table_data_1: &TableData,
     table_data_2: &TableData,
     mut create_sqlite_comparison_files: bool,
@@ -304,7 +349,7 @@ async fn get_unique_rows(
 
 
 /// Cleans up all sqlite files inside the current executing directory
-pub(crate) async fn clear_sqlite_data(){
+pub async fn clear_sqlite_data(){
     // get all files in the current directory
     let files = std::fs::read_dir(".").unwrap();
     for file in files{

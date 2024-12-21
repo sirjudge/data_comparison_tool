@@ -19,6 +19,10 @@ pub fn setup() -> (argument_parser::Arguments, log::Log) {
     // init the log and run the processor
     let mut log = log::Log::new(&arguments);
     log.set_verbose(LogVerbosity::Debug);
+
+
+
+
     (arguments, log)
 }
 

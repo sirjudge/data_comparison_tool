@@ -13,10 +13,23 @@ use sqlx::{
 };
 use std::env;
 
+pub async fn drop_table(table_name: &str, log: &Log) {
+    let pool = get_connection("ComparisonData", log).await;
+    let drop_query = format!("drop table if exists {}", table_name);
+    let result = sqlx::query(&drop_query).execute(&pool).await;
+    match result {
+        Ok(_) => {
+            log.info(&format!("dropped table: {}", table_name));
+        },
+        Err(error) => {
+            panic!("error occurred while dropping table: {:?}", error);
+        },
+    }
+}
 
 /// open a connection to the mysql databse, executes the query and then
 /// returns a vector of the rows returned
-pub(crate) async fn query(query_string: &str, database: &str, log: &Log) -> Vec<MySqlRow> {
+pub async fn query(query_string: &str, database: &str, log: &Log) -> Vec<MySqlRow> {
     // open a connection to the test db and execute the query
     let pool = get_connection(database, log).await;
     let rows = sqlx::query(query_string).fetch_all(&pool).await;
@@ -35,7 +48,7 @@ pub(crate) async fn query(query_string: &str, database: &str, log: &Log) -> Vec<
     }
 }
 
-pub(crate) async fn get_connection(database_name: &str, log: &Log) -> Pool<MySql> {
+pub async fn get_connection(database_name: &str, log: &Log) -> Pool<MySql> {
     let database_name_override = "ComparisonData";
     // BUG: the connection string is definitely an env variable but is not being populated
     // correctly.
@@ -73,7 +86,7 @@ pub(crate) async fn get_connection(database_name: &str, log: &Log) -> Pool<MySql
 
 /// given a table now select 1 row from the table and extract
 /// a list of columns and the primary key
-pub(crate) async fn get_table_data(table_name: &str, log: &Log) -> TableData {
+pub async fn get_table_data(table_name: &str, log: &Log) -> TableData {
     let pool = get_connection("ComparisonData", log).await;
     let select_query = format!("select * from {} limit 1", table_name);
 
