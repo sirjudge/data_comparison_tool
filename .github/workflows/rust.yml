@@ -14,5 +14,4 @@ jobs:
     - name: Build
       run: cargo build --verbose
     - name: Run tests
-      run: make docker-build
-      run: cargo test --verbose
+      run: cargo test --verbose; make docker-build
