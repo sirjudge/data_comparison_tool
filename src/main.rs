@@ -2,7 +2,7 @@ use std::io;
 use data_comparison_tool::{
     processor,
     interface::{
-        ui,
+        tui,
         argument_parser,
     },
     interface::log::Log
@@ -20,7 +20,7 @@ fn main() -> Result<(), io::Error> {
 
     // if the TUI flag is passed in run the terminal and early return
     if args.tui {
-        let result = ui::run_terminal(&args, &log);
+        let result = tui::run_terminal(&args, &log);
         ratatui::restore();
         return result;
     }

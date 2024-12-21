@@ -7,10 +7,9 @@ use crate::{
 };
 use sqlx::{
     migrate::MigrateDatabase,
-    sqlite::{ SqlitePoolOptions, SqliteRow },
+    sqlite::SqlitePoolOptions,
     SqlitePool,
     Column,
-    Row,
     Pool,
 };
 
@@ -37,7 +36,7 @@ pub(crate) async fn get_connection(log: &Log) -> Pool<sqlx::Sqlite> {
 }
 
 /// Compare two sqlite tables and return the differences
-pub(crate) async fn compare_tables_sqlite (
+pub(crate) async fn compare_tables (
     table_data_1: &TableData,
     table_data_2: &TableData,
     mut create_sqlite_comparison_files: bool,

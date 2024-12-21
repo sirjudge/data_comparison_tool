@@ -19,7 +19,10 @@ use crate::{
 pub fn run_comparison(args: &argument_parser::Arguments, log: &Log) -> ComparisonData {
     // if the generate data flag is set then generate the data
     // for the two tables passed in
-    generate_data(args, log);
+    if args.generate_data {
+        generate_data(args, log);
+        log.info(&format!("Generated {} rows for each table", args.number_of_rows_to_generate));
+    }
 
     // if the clean flag is set then clean up the sqlite databses
     if args.clean {
@@ -96,7 +99,7 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
     now = SystemTime::now();
     let result =
         block_on(
-            sqlite::compare_tables_sqlite(
+            sqlite::compare_tables(
                 &table_1_data,
                 &table_2_data,
                 args.create_sqlite_comparison_files,
@@ -125,7 +128,7 @@ fn generate_data(args: &argument_parser::Arguments, log: &Log){
         return
     };
 
-    log.info("data creation underway");
+    log.debug("data creation underway");
     let mut now = SystemTime::now();
     block_on(generator::create_new_mysql_data(args.number_of_rows_to_generate, &args.table_name_1, log));
     match now.elapsed(){
@@ -146,7 +149,7 @@ fn generate_data(args: &argument_parser::Arguments, log: &Log){
     match now.elapsed(){
         Ok(elapsed) => {
             let log_message = format!("Time it took to create 2nd table: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
-            log.info(&log_message);
+            log.debug(&log_message);
         }
         Err(e) => {
             panic!("An error occured: {:?}", e);
