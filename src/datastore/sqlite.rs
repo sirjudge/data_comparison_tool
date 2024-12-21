@@ -1,14 +1,16 @@
 use crate::{
-    interface::{argument_parser::Arguments, log::Log}, models::{
+    interface::log::Log,
+    models::{
         comparison_data::ComparisonData,
         table_data::TableData,
     }
 };
 use sqlx::{
     migrate::MigrateDatabase,
-    sqlite::SqlitePoolOptions,
+    sqlite::{ SqlitePoolOptions, SqliteRow },
     SqlitePool,
     Column,
+    Row,
     Pool,
 };
 
@@ -314,4 +316,36 @@ pub(crate) async fn clear_sqlite_data(){
             std::fs::remove_file(file_name).unwrap();
         }
     }
+}
+
+pub fn sqlite_row_to_string_vec(row:&SqliteRow, log: &Log) -> Vec<String> {
+    // convert sqliteRow to csv row
+    let mut csv_row = Vec::new();
+    let number_of_columns = row.columns().len();
+    for i in 0..number_of_columns {
+        let column_type = row.column(i).type_info().to_string();
+        match column_type.as_str() {
+            "TEXT" => {
+                let value: String = row.get(i);
+                csv_row.push(value);
+            }
+            "INTEGER" => {
+                let value: i64 = row.get(i);
+                csv_row.push(value.to_string());
+            }
+            "REAL" => {
+                let value: f64 = row.get(i);
+                csv_row.push(value.to_string());
+            }
+            "BLOB" => {
+                let value: String = row.get(i);
+                csv_row.push(value);
+            }
+            _ => {
+                log.error(&format!("unknown column type: {}", column_type));
+            }
+        }
+    }
+    // finally return csv row
+    csv_row
 }
