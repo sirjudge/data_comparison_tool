@@ -103,10 +103,10 @@ pub async fn create_new_mysql_table_data(num_rows_to_generate: i32, table_name: 
         insert_query.push_str(
             &format!(
                 "({},'{}','{}','{}'),",
-                random_long(500),
-                random_long(500),
-                random_string(25),
-                random_string(25)
+                random_long(100),
+                random_long(100),
+                random_string(4),
+                random_string(4)
             ));
     }
 

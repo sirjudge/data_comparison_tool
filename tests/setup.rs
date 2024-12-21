@@ -7,7 +7,6 @@ use data_comparison_tool::interface::{
 // todo: should have a method here that generates the data for the tables on start up and then does
 // the same on tear down
 pub fn setup() -> (argument_parser::Arguments, log::Log) {
-    // init custom args for now
     let mut arguments = argument_parser::Arguments::new();
     arguments.tui = false;
     arguments.help = false;
@@ -16,12 +15,9 @@ pub fn setup() -> (argument_parser::Arguments, log::Log) {
     arguments.generate_data = true;
     arguments.clean = false;
     arguments.verbose = true;
-    // init the log and run the processor
+    arguments.number_of_rows_to_generate = 20;
     let mut log = log::Log::new(&arguments);
     log.set_verbose(LogVerbosity::Debug);
-
-
-
 
     (arguments, log)
 }
