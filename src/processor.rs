@@ -2,7 +2,7 @@ use async_std::task::block_on;
 use std::time::SystemTime;
 use crate::{
     data_creator,
-    database::{
+    datastore::{
         mysql,
         sqlite
     },

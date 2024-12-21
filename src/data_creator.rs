@@ -1,6 +1,6 @@
 use rand::{ thread_rng, Rng};
 use crate::{
-    database::mysql::get_mysql_connection,
+    datastore::mysql::get_mysql_connection,
     interface::log::Log,
 };
 
@@ -76,5 +76,4 @@ fn random_string(len: usize) -> String {
     }
     result
 }
-
 

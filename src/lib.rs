@@ -1,6 +1,7 @@
-pub mod database {
+pub mod datastore {
     pub mod mysql;
     pub mod sqlite;
+    pub mod csv;
 }
 
 pub mod models {

@@ -1,7 +1,7 @@
 use crate::{
     interface::log::Log,
     models::table_data::TableData,
-    database::{
+    datastore::{
         sqlite,
         mysql
     },
@@ -68,8 +68,6 @@ async fn create_new_sqlite_table(
     sqlite_pool: &Pool<sqlx::Sqlite>,
     table_name: &str,
 ) -> bool {
-    // extract table information
-    // init insert query string
     let mut create_query = format!("create table if not exists {} (", table_name);
 
     // for each column in the first mysql row generate the column name and type
@@ -151,7 +149,7 @@ fn create_sqlite_insert_query_from_mysql_row(mysql_rows: &Vec<MySqlRow>, table_n
 }
 
 fn mysql_type_to_sqlite_type(mysql_type: &str) -> String {
-    //TODO: add support for datetime
+    //TODO: add support for other column types here
     match mysql_type {
         "INT" => "INTEGER".to_string(),
         "VARCHAR" => "TEXT".to_string(),
