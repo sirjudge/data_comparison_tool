@@ -3,7 +3,7 @@ use rand::{ thread_rng, Rng};
 use std::time::SystemTime;
 use crate::{
     datastore::{
-        mysql::get_mysql_connection,
+        mysql::get_connection,
         transformer::mysql_type_to_sqlite_type,
         generator
     },
@@ -30,7 +30,7 @@ pub fn generate_data(args: &argument_parser::Arguments, log: &Log){
 
     log.debug("data creation underway");
     let mut now = SystemTime::now();
-    block_on(generator::create_new_mysql_data(args.number_of_rows_to_generate, &args.table_name_1, log));
+    block_on(generator::create_new_mysql_table_data(args.number_of_rows_to_generate, &args.table_name_1, log));
     match now.elapsed(){
         Ok(elapsed) => {
             // implement a profiling system to only measure if that flag is set
@@ -45,7 +45,8 @@ pub fn generate_data(args: &argument_parser::Arguments, log: &Log){
     log.debug("starting second data generation");
     now = SystemTime::now();
 
-    block_on(generator::create_new_mysql_data(args.number_of_rows_to_generate, &args.table_name_2, log));
+    //block_on(generator::create_new_mysql_table_data(args.number_of_rows_to_generate, &args.table_name_2, log));
+    block_on(generator::create_new_mysql_table_data(args.number_of_rows_to_generate, &args.table_name_2, log));
     match now.elapsed(){
         Ok(elapsed) => {
             let log_message = format!("Time it took to create 2nd table: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
@@ -57,9 +58,9 @@ pub fn generate_data(args: &argument_parser::Arguments, log: &Log){
     }
 }
 
-/// Create a new table in the mysql database and populate it with random data
-pub(crate) async fn create_new_mysql_data(num_rows_to_generate: i32, table_name: &str, log: &Log){
-    let pool = get_mysql_connection("test", log).await;
+pub async fn create_new_mysql_table_data(num_rows_to_generate: i32, table_name: &str, log: &Log){
+    let pool = get_connection("test", log).await;
+    //TODO: This should be more configurable
     let create_new_table_query = format!(
         "CREATE TABLE IF NOT EXISTS {}
         (
@@ -83,6 +84,14 @@ pub(crate) async fn create_new_mysql_data(num_rows_to_generate: i32, table_name:
         }
     }
 
+    //OPTIMIZE: this is a really painful thing to see, we should be able to
+    //do this a bit faster than making one huge string as an insert statement
+    //and then executing it. Consider maybe doing this asyncronously
+    //and/or in parallel since order doesn't matter with random data creation
+
+    //TODO: Similar sentement as above
+    // todo: can speed this up by using prepared statement I think and passing data in via
+    // parameterized query
     let mut insert_query =
         format!(
             "INSERT INTO {}
@@ -94,10 +103,10 @@ pub(crate) async fn create_new_mysql_data(num_rows_to_generate: i32, table_name:
         insert_query.push_str(
             &format!(
                 "({},'{}','{}','{}'),",
-                random_long(500),
-                random_long(500),
-                random_string(25),
-                random_string(25)
+                random_long(100),
+                random_long(100),
+                random_string(4),
+                random_string(4)
             ));
     }
 
@@ -113,7 +122,6 @@ pub(crate) async fn create_new_mysql_data(num_rows_to_generate: i32, table_name:
         }
     }
 }
-
 
 /// using thread_rng generate a random number between 1 and max
 fn random_long(max: i32) -> i32 {
@@ -138,6 +146,7 @@ pub async fn export_mysql_rows_to_sqlite_table(
     mysql_rows: &[MySqlRow],
     sqlite_pool: &Pool<sqlx::Sqlite>,
     table_name: &str,
+    log: &Log
 ) -> bool {
     let mut create_query = format!("create table if not exists {} (", table_name);
 
@@ -153,6 +162,7 @@ pub async fn export_mysql_rows_to_sqlite_table(
     create_query.pop();
     create_query.push(')');
 
+    log.debug(&format!("create query: {}", create_query));
     // execute and return the result
     let result = sqlx::query(create_query.as_str()).execute(sqlite_pool).await;
     match result {

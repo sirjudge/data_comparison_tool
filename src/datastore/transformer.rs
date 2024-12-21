@@ -9,47 +9,14 @@ use crate::{
 
 use sqlx::{
     mysql::MySqlRow,
-    sqlite::SqliteRow,
     Row,
     Column,
     TypeInfo
 };
 
-pub fn sqlite_row_to_string_vec(row:&SqliteRow, log: &Log) -> Vec<String> {
-    // convert sqliteRow to csv row
-    let mut csv_row = Vec::new();
-    let number_of_columns = row.columns().len();
-    for i in 0..number_of_columns {
-        let column_type = row.column(i).type_info().to_string();
-        match column_type.as_str() {
-            "TEXT" => {
-                let value: String = row.get(i);
-                csv_row.push(value);
-            }
-            "INTEGER" => {
-                let value: i64 = row.get(i);
-                csv_row.push(value.to_string());
-            }
-            "REAL" => {
-                let value: f64 = row.get(i);
-                csv_row.push(value.to_string());
-            }
-            "BLOB" => {
-                let value: String = row.get(i);
-                csv_row.push(value);
-            }
-            _ => {
-                log.error(&format!("unknown column type: {}", column_type));
-            }
-        }
-    }
-    // finally return csv row
-    csv_row
-}
-
 /// Converts a batch of MySql rows to a sqlite new sqlite table
 /// and inserts the rows into the new table
-pub(crate) async fn mysql_table_to_sqlite_table(
+pub async fn mysql_table_to_sqlite_table(
     mysql_rows: &Vec<MySqlRow>,
     table_data: &TableData,
     log: &Log,
@@ -58,7 +25,7 @@ pub(crate) async fn mysql_table_to_sqlite_table(
     let sqlite_pool = sqlite::get_connection(log).await;
 
     // if we've built the new sqlite table
-    if generator::export_mysql_rows_to_sqlite_table(mysql_rows, &sqlite_pool, &table_data.table_name).await {
+    if generator::export_mysql_rows_to_sqlite_table(mysql_rows, &sqlite_pool, &table_data.table_name, log).await {
         log.info(&format!("created new sqlite table: {}", &table_data.table_name));
 
         // generate the insert query and run it

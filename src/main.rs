@@ -27,7 +27,7 @@ fn main() -> Result<(), io::Error> {
 
     //TODO: Eventually need to come back and
     // maybe do something with this
-    let _comparison_data = processor::run_comparison(&args, &log);
+    let _comparison_data = processor::run(&args, &log);
     Ok(())
 }
 

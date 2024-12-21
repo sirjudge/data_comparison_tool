@@ -132,7 +132,7 @@ fn draw_and_handle_state(
 
             // TOOD: This should be done in draw_running but is done
             // here to avoid lifetime and ownership conflictions
-            let comparison_data = processor::run_comparison(args, log);
+            let comparison_data = processor::run(args, log);
             set_comparison_data(comparison_data);
             log.debug("comparison complete, setting state to results");
             set_state(UIState::Results, log);
