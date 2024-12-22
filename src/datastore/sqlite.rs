@@ -7,10 +7,7 @@ use crate::{
 };
 use sqlx::{
     migrate::MigrateDatabase,
-    sqlite::{
-        SqlitePoolOptions,
-        SqliteRow
-    },
+    sqlite::SqlitePoolOptions,
     SqlitePool,
     Column,
     Row,

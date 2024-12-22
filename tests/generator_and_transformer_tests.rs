@@ -4,13 +4,13 @@ use data_comparison_tool::datastore::{
     sqlite
 };
 use async_std::task::block_on;
-pub mod setup;
+pub mod test_utils;
 
 /// generates a test table in mysql
 #[test]
-pub fn generate_mysql_table_test(){
+pub fn generate_mysql_table(){
     let table_name = "a_test_table";
-    let (_, log) = setup::setup();
+    let (_, log) = test_utils::setup();
 
     block_on(data_comparison_tool::datastore::sqlite::drop_table(table_name, &log));
     block_on(generator::create_new_mysql_table_data(20, table_name, &log));
@@ -32,11 +32,11 @@ pub fn generate_mysql_table_test(){
 /// takes an input test table and copys it to sqlite
 #[test]
 pub fn copy_mysql_to_sqlite(){
-    let (args, log) = setup::setup();
+    let (args, log) = test_utils::setup();
     // generate a test table and extract it into a tableData struct
     let table_name = "b_test_table";
-    block_on(mysql::drop_table(table_name, &log));
-    let rows_created = block_on(generate_mysql_table(table_name));
+    test_utils::drop_comparison_tables(table_name, &log);
+    let rows_created = block_on(test_utils::generate_mysql_table(table_name));
     assert_eq!(rows_created, args.number_of_rows_to_generate as usize);
     let table_data = block_on(mysql::get_table_data(table_name, &log));
     assert_eq!(table_data.columns.len(), 5);

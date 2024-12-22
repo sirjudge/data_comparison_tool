@@ -1,13 +1,10 @@
 use data_comparison_tool::{
-    interface::{
+    datastore::{
+        generator, mysql
+    }, interface::{
     argument_parser,
     log,
-    log_options::LogVerbosity
-    },
-    datastore::{
-        mysql,
-        generator,
-        sqlite
+    log_options::{LogOutput, LogVerbosity}
     }
 };
 use async_std::task::block_on;
@@ -24,6 +21,7 @@ pub fn setup() -> (argument_parser::Arguments, log::Log) {
     arguments.clean = false;
     arguments.verbose = true;
     arguments.number_of_rows_to_generate = 20;
+    arguments.log_output = LogOutput::Console;
     let mut log = log::Log::new(&arguments);
     log.set_verbose(LogVerbosity::Debug);
 
@@ -35,6 +33,18 @@ pub fn teardown() {
     panic!("teardown not implemented");
 }
 
+pub fn drop_comparison_tables(table_name: &str, log: &log::Log) {
+    log.info(&format!("dropping tables: {}", table_name));
+    block_on(mysql::drop_table(table_name, log));
+
+    let changed_row_table = format!("changedRows_{}", table_name);
+    log.info(&format!("dropping tables: {}", changed_row_table));
+    block_on(mysql::drop_table(&changed_row_table, log));
+
+    let unique1 = format!("unique_{}", table_name);
+    log.info(&format!("dropping tables: {}", unique1));
+    block_on(mysql::drop_table(&unique1, log));
+}
 
 /// generates a test table in mysql
 pub async fn generate_mysql_table(table_name: &str) -> usize {
