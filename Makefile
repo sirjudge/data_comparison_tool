@@ -1,6 +1,14 @@
 test:
-	make clean-output
 	make clean-logs
+	make docker-build
+	cargo test
+
+test-full-clean:
+	make clean
+	make docker-build
+	cargo test
+
+test-no-clean:
 	cargo test
 
 binary-release:
@@ -40,7 +48,7 @@ clean-logs:
 
 clean-output:
 	rm -f *.csv
-	rm -f *.sqolite*
+	rm -f *.sqlite*
 
 profile-release-build:
 	cargo build --release --timings

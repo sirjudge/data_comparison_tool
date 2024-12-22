@@ -150,6 +150,13 @@ async fn get_changed_rows(
     log: &Log,
 ) -> Vec<sqlx::sqlite::SqliteRow> {
     let select_query = if create_sqlite_comparison_files {
+
+        let changed_table_name = format!("changedRows_{}", sqlite_table_1.table_name);
+        if check_if_table_exists(&changed_table_name, sqlite_pool).await {
+            log.warn(&format!("table {} already exists, dropping table", changed_table_name));
+            drop_table(&changed_table_name, log).await;
+        }
+
         format!("
             create table changedRows_{}
             as
@@ -285,6 +292,27 @@ async fn generate_main_comparison_file(
     }
 }
 
+pub async fn check_if_table_exists(table_name: &str, sqlite_pool: &SqlitePool) -> bool {
+    let check_if_table_exists_query = format!(
+        "select count(*) from sqlite_master where type='table' and name='{}'",
+        table_name
+    );
+
+    let result = sqlx::query(check_if_table_exists_query.as_str())
+        .fetch_one(sqlite_pool)
+        .await;
+
+    match result {
+        Ok(row) => {
+            let count: i32 = row.get(0);
+            count > 0
+        },
+        Err(error) => {
+            panic!("error occurred while checking if table exists: {:?}", error);
+        },
+    }
+}
+
 /// Gets the rows that are unique to the first table and do not eixst in the second
 /// If create_sqlite_comparison_files is true then the rows are saved to a new table
 /// called unique_{table_name}
@@ -296,6 +324,15 @@ async fn get_unique_rows(
     log: &Log,
 ) -> Vec<sqlx::sqlite::SqliteRow> {
     let select_query = if create_sqlite_comparison_files {
+        //TODO: This works for now to get it stable but should come back and revisit
+        // this at some point to handle a bit more gracefully than whoops lol your prev
+        // data is gone
+        // Drop the table if it exists
+        if check_if_table_exists(&sqlite_table_1.table_name, sqlite_pool).await {
+            log.warn(&format!("table {} already exists, dropping table", sqlite_table_1.table_name));
+            drop_table(&format!("unique_{}", sqlite_table_1.table_name), log).await;
+        }
+
         // generate select statement and join on the primary key
         format!(
             "create table unique_{}
@@ -333,6 +370,7 @@ async fn get_unique_rows(
         .await;
 
     // if no errors return the rows otherwise return that there was an error
+
     match rows {
         Ok(rows) => {
             log.info(&format!("extracted {} unique rows", rows.len()));
