@@ -6,31 +6,27 @@ use data_comparison_tool::datastore::{
 use async_std::task::block_on;
 pub mod setup;
 
-
-pub async fn generate_mysql_table(table_name: &str) -> usize {
+/// generates a test table in mysql
+#[test]
+pub fn generate_mysql_table_test(){
+    let table_name = "a_test_table";
     let (_, log) = setup::setup();
 
     block_on(data_comparison_tool::datastore::sqlite::drop_table(table_name, &log));
     block_on(generator::create_new_mysql_table_data(20, table_name, &log));
 
     let select_query = format!("select * from {}", table_name);
-    let mysql_pool = mysql::get_connection("ComparisonData",&log).await;
-    let result = sqlx::query(&select_query).fetch_all(&mysql_pool).await;
+    let mysql_pool = block_on( mysql::get_connection("ComparisonData",&log));
+    let result = block_on(sqlx::query(&select_query).fetch_all(&mysql_pool));
     match result {
         Ok(rows) => {
-            rows.len()
+            // make sure we have the rows populated
+            assert!(!rows.is_empty());
         },
         Err(error) => {
             panic!("error occurred while fetching rows from mysql table: {:?}", error);
         },
     }
-}
-
-/// generates a test table in mysql
-#[test]
-pub fn generate_mysql_table_test(){
-    let table_name = "a_test_table";
-    block_on(generate_mysql_table(table_name));
 }
 
 /// takes an input test table and copys it to sqlite
