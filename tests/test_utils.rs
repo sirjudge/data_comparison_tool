@@ -1,31 +1,32 @@
 use data_comparison_tool::{
     datastore::{
         generator, mysql
-    }, interface::{
-    argument_parser,
-    log,
-    log_options::{LogOutput, LogVerbosity}
+    },
+    interface::{
+        config,
+        log,
+        log_options::{LogOutput, LogVerbosity}
     }
 };
 use async_std::task::block_on;
 
 // todo: should have a method here that generates the data for the tables on start up and then does
 // the same on tear down
-pub fn setup() -> (argument_parser::Arguments, log::Log) {
-    let mut arguments = argument_parser::Arguments::new();
-    arguments.tui = false;
-    arguments.help = false;
-    arguments.table_name_1 = "a_testTable1".to_string();
-    arguments.table_name_2 = "a_testTable2".to_string();
-    arguments.generate_data = true;
-    arguments.clean = false;
-    arguments.verbose = true;
-    arguments.number_of_rows_to_generate = 20;
-    arguments.log_output = LogOutput::Console;
-    let mut log = log::Log::new(&arguments);
+pub fn setup() -> (config::Config, log::Log) {
+    let mut config = config::Config::default();
+    config.tui = false;
+    config.log_config.help = false;
+    config.comparison_options.database_1_config.table_name = "a_testTable1".to_string();
+    config.comparison_options.database_2_config.table_name = "a_testTable2".to_string();
+    config.generate_data = true;
+    config.comparison_options.clean = false;
+    config.log_config.verbose = true;
+    config.number_of_rows_to_generate = 20;
+    config.log_config.log_output_type = LogOutput::Console;
+    let mut log = log::Log::new(&config);
     log.set_verbose(LogVerbosity::Debug);
 
-    (arguments, log)
+    (config, log)
 }
 
 /// responsible for cleaning up test runtime artifacts

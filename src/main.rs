@@ -1,33 +1,34 @@
 use std::io;
 use data_comparison_tool::{
-    processor,
     interface::{
-        tui,
-        argument_parser,
+        log::Log,
+        config::Config,
+        tui
     },
-    interface::log::Log
+    processor
 };
 
 fn main() -> Result<(), io::Error> {
     // parse input arguments and initialize the log
-    let args = argument_parser::Arguments::new();
-    let log = Log::new(&args);
+    // let config = argument_parser::Arguments::new();
+    let config = Config::new_from_args();
+    let log = Log::new(&config);
 
     // if help flag passed in don't do anything else
-    if args.help {
+    if config.log_config.help{
         return Ok(());
     }
 
     // if the TUI flag is passed in run the terminal and early return
-    if args.tui {
-        let result = tui::run_terminal(&args, &log);
+    if config.tui {
+        let result = tui::run_terminal(&config, &log);
         ratatui::restore();
         return result;
     }
 
     //TODO: Eventually need to come back and
     // maybe do something with this
-    let _comparison_data = processor::run(&args, &log);
+    let _comparison_data = processor::run(&config, &log);
     Ok(())
 }
 

@@ -1,13 +1,15 @@
 use async_std::task::block_on;
 use rand::{ thread_rng, Rng};
-use std::time::SystemTime;
+use std::{
+    time::SystemTime,
+};
 use crate::{
     datastore::{
         mysql::get_connection,
         transformer::mysql_type_to_sqlite_type,
         generator
     },
-    interface::{ log::Log, config },
+    interface::{ log::Log, toml },
 };
 use sqlx::{
     Pool,
@@ -17,7 +19,7 @@ use sqlx::{
     TypeInfo
 };
 
-pub fn generate_data(config: &config::Config, log: &Log){
+pub fn generate_data(config: &toml::Config, log: &Log){
     if !config.generate_data {
         log.info("generate_data flag is off, skipping data generation");
         return
@@ -26,13 +28,7 @@ pub fn generate_data(config: &config::Config, log: &Log){
     log.debug("data creation underway");
     let mut now = SystemTime::now();
     //block_on(generator::create_new_mysql_table_data(args.number_of_rows_to_generate, &args.table_name_1, log));
-    block_on(
-        generator::create_new_mysql_table_data(
-            config.number_of_rows_to_generate,
-            &config.comparison_options.database_1_config.table_name,
-            log
-        )
-    );
+    block_on(generator::create_new_mysql_table_data(&config.number_of_rows_to_generate, &config.comparison_options.database_1_config.table_name, log));
     match now.elapsed(){
         Ok(elapsed) => {
             // TODO:implement a profiling system to only measure if that flag is set

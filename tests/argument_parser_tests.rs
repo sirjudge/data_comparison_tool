@@ -1,34 +1,22 @@
-use data_comparison_tool::interface::argument_parser::Arguments;
-use data_comparison_tool::interface::toml;
+use data_comparison_tool::interface::config;
 
-/// Test to make sure non user friendly settings are turned off or set to sane
-/// defaults
-#[test]
-pub fn get_default_args(){
-    let args = Arguments::default();
-
-    // default should always be no tui
-    assert!(!args.tui);
-}
-
-/// test to make sure the aguments are being correctly parsed from a
 /// toml file
 #[test]
 pub fn get_args_from_toml(){
     // get the args from test file into new config struct
-    let toml_config = toml::Config::new("tests/comp.toml");
+    let toml_config = config::Config::new("tests/comp.toml");
 
     // Assert we have the correct values in test/comp.toml
     // log related information
     assert!(toml_config.log_config.log_level == "DEBUG");
     assert!(toml_config.log_config.log_file == "test.log");
 
-    // databse config
-    assert!(toml_config.database_config.db_name == "test_db");
-    assert!(toml_config.database_config.db_port == 1234);
-    assert!(toml_config.database_config.db_password == "testPassword");
-    assert!(toml_config.database_config.db_user == "testUser");
-    assert!(toml_config.database_config.db_host == "localhost");
+    // db config
+    assert!(toml_config.comparison_options.database_1_config.db_name == "test_db");
+    assert!(toml_config.comparison_options.database_1_config.db_port == 1234);
+    assert!(toml_config.comparison_options.database_1_config.db_password == "testPassword");
+    assert!(toml_config.comparison_options.database_1_config.db_user == "testUser");
+    assert!(toml_config.comparison_options.database_1_config.db_host == "localhost");
 }
 
 

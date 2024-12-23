@@ -5,7 +5,7 @@ use std::{
 };
 use crate::interface::{
     log_options::{LogVerbosity, LogOutput},
-    argument_parser::Arguments,
+    config::Config
 };
 
 /// creates a log file and returns the generated log file name
@@ -33,10 +33,10 @@ pub struct Log {
 }
 
 impl Log {
-    pub fn new(args:&Arguments) -> Log {
+    pub fn new(config:&Config) -> Log {
         Log {
             log_file_name: create_log_file().unwrap(),
-            log_type: args.log_output.clone(),
+            log_type: config.log_config.log_output_type.clone(),
             verbose: LogVerbosity::Info
         }
     }
