@@ -65,6 +65,9 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
         query_2 = format!("select * from {}", args.table_name_2);
     }
 
+    // OPTIMIZE: this could be either done in parallel or via a stream? row by row.
+    // Consider coming back here
+
     // generate the select statements + return the rows generated from the select statement
     let database_name = "test";
     let mysql_rows_1= block_on(mysql::query(&query_1,database_name, log));
@@ -79,7 +82,7 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
         }
 
         Err(e) => {
-            panic!("An error occured: {:?}", e);
+            panic!("An error occured moving mysql table {} to sqlite: {:?}", table_1_data.table_name ,e);
         }
     }
 
@@ -91,7 +94,7 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
             log.info(&log_message);
         }
         Err(e) => {
-            panic!("An error occured: {:?}", e);
+            panic!("An error occured moving mysql table {} to sqlite: {:?}", table_2_data.table_name ,e);
         }
     }
 

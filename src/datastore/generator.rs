@@ -20,11 +20,9 @@ use sqlx::{
     TypeInfo
 };
 
-
-/// if args.generate_data is set then generate the data for the two tables
 pub fn generate_data(args: &argument_parser::Arguments, log: &Log){
     if !args.generate_data {
-        log.info("skipping data generation");
+        log.info("generate_data flag is off, skipping data generation");
         return
     };
 
@@ -33,7 +31,7 @@ pub fn generate_data(args: &argument_parser::Arguments, log: &Log){
     block_on(generator::create_new_mysql_table_data(args.number_of_rows_to_generate, &args.table_name_1, log));
     match now.elapsed(){
         Ok(elapsed) => {
-            // implement a profiling system to only measure if that flag is set
+            // TODO:implement a profiling system to only measure if that flag is set
             let log_message = format!("Time it took to create data: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
             log.debug(&log_message);
         }
@@ -103,7 +101,7 @@ pub async fn create_new_mysql_table_data(num_rows_to_generate: i32, table_name: 
         insert_query.push_str(
             &format!(
                 "({},'{}','{}','{}'),",
-                random_long(100),
+                random_long(500),
                 random_long(100),
                 random_string(4),
                 random_string(4)
