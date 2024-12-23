@@ -503,6 +503,7 @@ dependencies = [
  "csv",
  "rand",
  "ratatui",
+ "serde",
  "sqlx",
  "timer",
  "tokio",

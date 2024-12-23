@@ -1,0 +1,11 @@
+[log_config]
+log_level = "DEBUG"
+log_file = "test.log"
+
+[database_config]
+db_name = "test_db"
+db_port = 1234
+db_password = "testPassword"
+db_user = "testUser"
+db_host = "localhost"
+

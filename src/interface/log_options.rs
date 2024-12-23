@@ -6,7 +6,7 @@ pub enum LogVerbosity {
     Error = 3
 }
 
-#[derive(Clone)]
+#[derive(Clone,serde::Serialize,serde::Deserialize)]
 pub enum LogOutput {
     StdOut,
     File,

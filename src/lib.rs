@@ -17,6 +17,7 @@ pub mod interface {
     pub mod state;
     pub mod log_options;
     pub mod log;
+    pub mod toml;
 }
 
 pub mod processor;
