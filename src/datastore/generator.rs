@@ -1,16 +1,16 @@
 use async_std::task::block_on;
 use rand::{ thread_rng, Rng};
-use std::time::SystemTime;
+use std::{
+    time::SystemTime,
+    env::args
+};
 use crate::{
     datastore::{
         mysql::get_connection,
         transformer::mysql_type_to_sqlite_type,
         generator
     },
-    interface::{
-        log::Log,
-        argument_parser
-    },
+    interface::{ log::Log, toml },
 };
 use sqlx::{
     Pool,
@@ -20,14 +20,15 @@ use sqlx::{
     TypeInfo
 };
 
-pub fn generate_data(args: &argument_parser::Arguments, log: &Log){
-    if !args.generate_data {
+pub fn generate_data(config: &toml::Config, log: &Log){
+    if !config.generate_data {
         log.info("generate_data flag is off, skipping data generation");
         return
     };
 
     log.debug("data creation underway");
     let mut now = SystemTime::now();
+    //block_on(generator::create_new_mysql_table_data(args.number_of_rows_to_generate, &args.table_name_1, log));
     block_on(generator::create_new_mysql_table_data(args.number_of_rows_to_generate, &args.table_name_1, log));
     match now.elapsed(){
         Ok(elapsed) => {
@@ -43,8 +44,18 @@ pub fn generate_data(args: &argument_parser::Arguments, log: &Log){
     log.debug("starting second data generation");
     now = SystemTime::now();
 
-    //block_on(generator::create_new_mysql_table_data(args.number_of_rows_to_generate, &args.table_name_2, log));
-    block_on(generator::create_new_mysql_table_data(args.number_of_rows_to_generate, &args.table_name_2, log));
+    //block_on(generator::create_new_mysql_table_data(
+        //args.number_of_rows_to_generate,
+        //&args.table_name_2,
+        //log)
+    //);
+    block_on(
+        generator::
+        create_new_mysql_table_data(
+            config.number_of_rows_to_generate,
+            config.comparison_options.database_2_config.db_name.as_str(),
+            log)
+    );
     match now.elapsed(){
         Ok(elapsed) => {
             let log_message = format!("Time it took to create 2nd table: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
@@ -56,7 +67,11 @@ pub fn generate_data(args: &argument_parser::Arguments, log: &Log){
     }
 }
 
-pub async fn create_new_mysql_table_data(num_rows_to_generate: i32, table_name: &str, log: &Log){
+pub async fn create_new_mysql_table_data(
+    num_rows_to_generate: i32,
+    table_name: &str,
+    log: &Log
+){
     let pool = get_connection("test", log).await;
     //TODO: This should be more configurable
     let create_new_table_query = format!(

@@ -16,13 +16,14 @@ pub fn get_default_args(){
 #[test]
 pub fn get_args_from_toml(){
     // get the args from test file into new config struct
-    let toml_config = toml::config::new("tests/comp.toml");
+    let toml_config = toml::Config::new("tests/comp.toml");
 
     // Assert we have the correct values in test/comp.toml
-    // files
+    // log related information
     assert!(toml_config.log_config.log_level == "DEBUG");
     assert!(toml_config.log_config.log_file == "test.log");
 
+    // databse config
     assert!(toml_config.database_config.db_name == "test_db");
     assert!(toml_config.database_config.db_port == 1234);
     assert!(toml_config.database_config.db_password == "testPassword");

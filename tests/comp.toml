@@ -1,11 +1,30 @@
+[comparison_options]
+create_sqlite_comparison_files = true
+in_memory_sqlite = true
+
+[Datab
+
 [log_config]
 log_level = "DEBUG"
 log_file = "test.log"
 
-[database_config]
+[database_1_config]
 db_name = "test_db"
 db_port = 1234
 db_password = "testPassword"
 db_user = "testUser"
 db_host = "localhost"
+table_name = "test_table"
+query = "SELECT * FROM test_table"
+databse_type = "mysql"
 
+[database_2_config]
+db_name = "test_db"
+db_port = 1234
+db_password = "testPassword"
+db_user = "testUser"
+db_host = "localhost"
+table_name = "test_table"
+query = "SELECT * FROM test_table2"
+databse_type = "mysql"
+db_user = "testUser"
