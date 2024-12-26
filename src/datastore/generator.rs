@@ -1,6 +1,6 @@
-use async_std::task::block_on;
 use rand::{ thread_rng, Rng};
 use std::time::SystemTime;
+use async_std::task::block_on;
 use crate::{
     datastore::{
         mysql::get_connection,
@@ -18,7 +18,7 @@ use sqlx::{
     TypeInfo
 };
 
-pub async fn generate_table(config:&config::Config, log:&Log, db_config: &DatabaseConfig, profile: bool){
+pub async fn generate_table(config:&config::Config, log:&Log, db_config: &DatabaseConfig){
     log.debug("data creation underway");
 
     let pool = get_connection(log, db_config).await;
@@ -92,10 +92,10 @@ pub fn generate_data(config: &config::Config, log: &Log) {
     };
 
     log.debug("starting first data generation");
-    generate_table(config, log, &config.database_1_config, true);
+    block_on(generate_table(config, log, &config.database_1_config));
 
     log.debug("starting second data generation");
-    generate_table(config, log, &config.database_2_config, true);
+    block_on(generate_table(config, log, &config.database_1_config));
 
 }
 

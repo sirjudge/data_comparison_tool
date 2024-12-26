@@ -19,7 +19,7 @@ use sqlx::{
     }
 };
 
-pub async fn drop_table(db_connection:&DatabaseConfig, log: &Log, config: &Config) {
+pub async fn drop_table(db_connection:&DatabaseConfig, log: &Log) {
     let pool = get_connection(log, db_connection).await;
     let drop_query = format!("drop table if exists {}", db_connection.table_name);
     let result = sqlx::query(&drop_query).execute(&pool).await;
