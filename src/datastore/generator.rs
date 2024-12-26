@@ -7,7 +7,10 @@ use crate::{
         transformer::mysql_type_to_sqlite_type,
         generator
     },
-    interface::{ log::Log, config },
+    interface::{
+        log::Log,
+        config
+    },
 };
 use sqlx::{
     Pool,
@@ -25,12 +28,14 @@ pub fn generate_data(config: &config::Config, log: &Log){
 
     log.debug("data creation underway");
     let mut now = SystemTime::now();
-    //block_on(generator::create_new_mysql_table_data(args.number_of_rows_to_generate, &args.table_name_1, log));
+
+    //TODO: eventually make this just pass config object
     block_on(
         generator::create_new_mysql_table_data(
             config.number_of_rows_to_generate,
-            &config.comparison_options.database_1_config.table_name,
-            log
+            &config.database_1_config.table_name,
+            log,
+            config
         )
     );
     match now.elapsed(){
@@ -56,8 +61,10 @@ pub fn generate_data(config: &config::Config, log: &Log){
         generator::
         create_new_mysql_table_data(
             config.number_of_rows_to_generate,
-            config.comparison_options.database_2_config.db_name.as_str(),
-            log)
+            config.database_2_config.db_name.as_str(),
+            log,
+            config
+            )
     );
     match now.elapsed(){
         Ok(elapsed) => {
@@ -73,9 +80,10 @@ pub fn generate_data(config: &config::Config, log: &Log){
 pub async fn create_new_mysql_table_data(
     num_rows_to_generate: i32,
     table_name: &str,
-    log: &Log
+    log: &Log,
+    config: &config::Config
 ){
-    let pool = get_connection("test", log).await;
+    let pool = get_connection("test", log, config).await;
     //TODO: This should be more configurable
     let create_new_table_query = format!(
         "CREATE TABLE IF NOT EXISTS {}

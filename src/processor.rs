@@ -52,12 +52,15 @@ pub fn run(config: &Config, log: &Log) -> ComparisonData {
 
 fn compare_data(config: &Config, log: &Log) -> ComparisonData {
 
-    let comp_data_1 =  &config.comparison_options.database_1_config;
-    let comp_data_2 =  &config.comparison_options.database_2_config;
+    let comp_data_1 =  &config.database_1_config;
+    let comp_data_2 =  &config.database_2_config;
+
+    log.debug(&format!("comparing data from {} to {}", comp_data_1.table_name, comp_data_2.table_name));
+
 
     // extract mysql data ino the table data struct
-    let table_1_data = block_on(mysql::get_table_data(&comp_data_1.table_name, log));
-    let table_2_data = block_on(mysql::get_table_data(&comp_data_2.table_name, log));
+    let table_1_data = block_on(mysql::get_table_data(&comp_data_1.table_name, log, config));
+    let table_2_data = block_on(mysql::get_table_data(&comp_data_2.table_name, log, config));
 
     // declare query_1 and query_2 variables but don't give them a value
     let mut query_1 = comp_data_1.query.clone();
@@ -76,8 +79,8 @@ fn compare_data(config: &Config, log: &Log) -> ComparisonData {
 
     // generate the select statements + return the rows generated from the select statement
     let database_name = "test";
-    let mysql_rows_1= block_on(mysql::query(&query_1,database_name, log));
-    let mysql_rows_2 = block_on(mysql::query(&query_2, database_name, log));
+    let mysql_rows_1= block_on(mysql::query(&query_1,database_name, log, config));
+    let mysql_rows_2 = block_on(mysql::query(&query_2, database_name, log, config));
 
     let mut now = SystemTime::now();
     block_on(transformer::mysql_table_to_sqlite_table(&mysql_rows_1, &table_1_data, log));

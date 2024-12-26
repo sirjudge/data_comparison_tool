@@ -16,6 +16,8 @@ pub enum DatabaseType {
 pub struct Config {
     pub comparison_options: ComparisonOptions,
     pub log_config: LogConfig,
+    pub database_1_config: DatabaseConfig1,
+    pub database_2_config: DatabaseConfig1,
     pub generate_data: bool,
     pub number_of_rows_to_generate: i32,
     pub tui: bool,
@@ -27,8 +29,6 @@ pub struct ComparisonOptions{
     pub output_file_name: String,
     pub output_file_type: OutputFileType,
     pub create_sqlite_comparison_files: bool,
-    pub database_1_config: DatabaseConfig1,
-    pub database_2_config: DatabaseConfig1,
     pub in_memory_sqlite: bool,
     pub clean: bool
 }
@@ -83,41 +83,22 @@ pub enum OutputFileType {
     Json
 }
 
-
 impl Default for Config {
     fn default() -> Self {
+        let now = Local::now();
         Config {
             comparison_options: ComparisonOptions {
-                output_file_name: String::from(""),
+                output_file_name: format!("comparison_output_{}.csv", now.format("%Y%m%d%H%M%S")),
                 output_file_type: OutputFileType::Csv,
-                create_sqlite_comparison_files: false,
-                database_1_config: DatabaseConfig1 {
-                    db_name: String::from(""),
-                    db_user: String::from(""),
-                    db_password: String::from(""),
-                    db_host: String::from(""),
-                    db_port: 0,
-                    table_name: String::from(""),
-                    query: String::from(""),
-                    database_type: DatabaseType::MySql
-                },
-                database_2_config: DatabaseConfig1 {
-                    db_name: String::from(""),
-                    db_user: String::from(""),
-                    db_password: String::from(""),
-                    db_host: String::from(""),
-                    db_port: 0,
-                    table_name: String::from(""),
-                    query: String::from(""),
-                    database_type: DatabaseType::MySql
-                },
-                in_memory_sqlite: false,
-                clean: false
+                create_sqlite_comparison_files: true,
+                in_memory_sqlite: true,
+                clean: true
             },
             log_config: LogConfig {
-                log_file: String::from(""),
-                log_level: String::from(""),
-                verbose: false,
+                //log_file: format!("data_comparison_{}.log", now.format("%Y%m%d%H%M%S")),
+                log_file:"test.log".to_string(),
+                log_level: "DEBUG".to_string(),
+                verbose: true,
                 help: false,
                 auto_yes: false,
                 log_output_type: LogOutput::File,
@@ -125,7 +106,27 @@ impl Default for Config {
             generate_data: false,
             number_of_rows_to_generate: 0,
             tui: false,
-            version: false
+            version: false,
+            database_1_config: DatabaseConfig1 {
+                db_name: String::from(""),
+                db_user: String::from(""),
+                db_password: String::from(""),
+                db_host: String::from(""),
+                db_port: 3306,
+                table_name: String::from(""),
+                query: String::from(""),
+                database_type: DatabaseType::MySql
+            },
+            database_2_config: DatabaseConfig1 {
+                db_name: String::from(""),
+                db_user: String::from(""),
+                db_password: String::from(""),
+                db_host: String::from(""),
+                db_port: 3306,
+                table_name: String::from(""),
+                query: String::from(""),
+                database_type: DatabaseType::MySql
+            },
         }
     }
 }
@@ -134,39 +135,14 @@ impl Config {
     pub fn new (toml_file_path: &str) -> Config {
         let toml_str = std::fs::read_to_string(toml_file_path).unwrap();
         let config: Config =
-            toml::from_str(&toml_str).unwrap();
-        config
-    }
-
-    pub fn new_from_args() -> Config {
-        let mut config = Config::default();
-        // let current_date_stamp = Local::now().format("%Y%m%d%H%M%S").to_string();
-
-        if std::env::args().len() == 1 {
-            println!("No args passed in, running with default args");
-            return config
-        }
+            match toml::from_str(&toml_str) {
+                Ok(config) => config,
+                Err(e) => {
+                    println!("Error parsing toml file:{} with error:{}", toml_file_path ,e);
+                    panic!("Uh oh spaghetti-o's");
+                }
+            };
 
         config
-    }
-
-    pub(crate) fn print_help(){
-        println!("Help requested! This is a tool to help compare large data sets between mysql and sqlite");
-        println!("Usage: data_comparison");
-        println!("\t-h : print this help message");
-        println!("\t-help : print this help message");
-        println!("\t-tui : run with terminal ui");
-        println!("\t-q1=<query> : specify a first mysql query to run");
-        println!("\t-q2=<query> : specify a second mysql query to run");
-        println!("\t-gen : generate new data in mysql");
-        println!("\t-verbose : verbose output");
-        println!("\t-version : print version information");
-        println!("\t-c : clean sqlite database");
-        println!("\t-t1=<table_name> : specify the name of the first table to compare");
-        println!("\t-t2=<table_name> : specify the name of the second table to compare");
-        println!("\t-in-memory : use an in memory sqlite database instead of file based");
-        println!("\t-create-in-flight : create sqlite comparison files while in flight");
-        println!("\t-auto-yes : automatically answer yes to all prompts");
-        println!("\t-output=<output_file> : specify the name of the output csv file");
     }
 }

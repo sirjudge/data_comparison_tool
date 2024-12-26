@@ -1,30 +1,35 @@
 [comparison_options]
 create_sqlite_comparison_files = true
 in_memory_sqlite = true
-
-[Datab
+output_file_name = "nicos_comparison"
+output_file_type = "Csv"
+generate_data = false
+clean = false
 
 [log_config]
 log_level = "DEBUG"
 log_file = "test.log"
+verbose = true
+help = false
+auto_yes = false
+log_output_type = "File"
 
 [database_1_config]
+database_type="MySql"
 db_name = "test_db"
-db_port = 1234
-db_password = "testPassword"
-db_user = "testUser"
+db_port = 3306
+db_user = "nico"
+db_password = "RealPassw0rd"
 db_host = "localhost"
 table_name = "test_table"
 query = "SELECT * FROM test_table"
-databse_type = "mysql"
 
 [database_2_config]
+database_type="MySql"
 db_name = "test_db"
-db_port = 1234
-db_password = "testPassword"
-db_user = "testUser"
+db_port = 3306
+db_user = "nico"
+db_password = "RealPassw0rd"
 db_host = "localhost"
 table_name = "test_table"
 query = "SELECT * FROM test_table2"
-databse_type = "mysql"
-db_user = "testUser"
