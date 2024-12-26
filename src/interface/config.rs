@@ -16,10 +16,9 @@ pub enum DatabaseType {
 pub struct Config {
     pub comparison_options: ComparisonOptions,
     pub log_config: LogConfig,
-    pub database_1_config: DatabaseConfig1,
-    pub database_2_config: DatabaseConfig1,
-    pub generate_data: bool,
-    pub number_of_rows_to_generate: i32,
+    pub database_1_config: DatabaseConfig,
+    pub database_2_config: DatabaseConfig,
+    pub data_generation: DataGeneration,
     pub tui: bool,
     pub version: bool
 }
@@ -48,7 +47,7 @@ pub struct LogConfig {
 // but should definitely be re-visited if optimization
 // is required
 #[derive(Deserialize)]
-pub struct DatabaseConfig1{
+pub struct DatabaseConfig {
     // connection level
     pub db_name: String,
     pub db_user: String,
@@ -63,30 +62,25 @@ pub struct DatabaseConfig1{
 }
 
 #[derive(Deserialize)]
-pub struct DatabaseConfig2 {
-    // connection level
-    pub db_name: String,
-    pub db_user: String,
-    pub db_password: String,
-    pub db_host: String,
-    pub db_port: u16,
-
-    // data extraction level
-    pub table_name: String,
-    pub query: String,
-    pub query_type: DatabaseType,
-}
-
-#[derive(Deserialize)]
 pub enum OutputFileType {
     Csv,
     Json
+}
+
+#[derive(Deserialize)]
+pub struct DataGeneration {
+    pub generate_data: bool,
+    pub number_of_rows_to_generate: i32,
 }
 
 impl Default for Config {
     fn default() -> Self {
         let now = Local::now();
         Config {
+            data_generation: DataGeneration {
+                generate_data: false,
+                number_of_rows_to_generate: 0,
+            },
             comparison_options: ComparisonOptions {
                 output_file_name: format!("comparison_output_{}.csv", now.format("%Y%m%d%H%M%S")),
                 output_file_type: OutputFileType::Csv,
@@ -103,11 +97,9 @@ impl Default for Config {
                 auto_yes: false,
                 log_output_type: LogOutput::File,
             },
-            generate_data: false,
-            number_of_rows_to_generate: 0,
             tui: false,
             version: false,
-            database_1_config: DatabaseConfig1 {
+            database_1_config: DatabaseConfig {
                 db_name: String::from(""),
                 db_user: String::from(""),
                 db_password: String::from(""),
@@ -117,7 +109,7 @@ impl Default for Config {
                 query: String::from(""),
                 database_type: DatabaseType::MySql
             },
-            database_2_config: DatabaseConfig1 {
+            database_2_config: DatabaseConfig {
                 db_name: String::from(""),
                 db_user: String::from(""),
                 db_password: String::from(""),

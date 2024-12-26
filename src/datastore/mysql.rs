@@ -1,6 +1,9 @@
 use crate::{
     interface::{
-        config::Config,
+        config::{
+            Config,
+            DatabaseConfig
+        },
         log::Log
     },
     models::table_data::TableData
@@ -16,13 +19,13 @@ use sqlx::{
     }
 };
 
-pub async fn drop_table(table_name: &str, log: &Log, config: &Config) {
-    let pool = get_connection("ComparisonData", log, config).await;
-    let drop_query = format!("drop table if exists {}", table_name);
+pub async fn drop_table(db_connection:&DatabaseConfig, log: &Log, config: &Config) {
+    let pool = get_connection(log, db_connection).await;
+    let drop_query = format!("drop table if exists {}", db_connection.table_name);
     let result = sqlx::query(&drop_query).execute(&pool).await;
     match result {
         Ok(_) => {
-            log.info(&format!("dropped table: {}", table_name));
+            log.info(&format!("dropped table: {}", db_connection.table_name));
         },
         Err(error) => {
             panic!("error occurred while dropping table: {:?}", error);
@@ -32,9 +35,9 @@ pub async fn drop_table(table_name: &str, log: &Log, config: &Config) {
 
 /// open a connection to the mysql databse, executes the query and then
 /// returns a vector of the rows returned
-pub async fn query(query_string: &str, database: &str, log: &Log, config: &Config) -> Vec<MySqlRow> {
+pub async fn query(query_string: &str, db_connection:&DatabaseConfig, log: &Log, config: &Config) -> Vec<MySqlRow> {
     // open a connection to the test db and execute the query
-    let pool = get_connection(database, log, config).await;
+    let pool = get_connection(log, db_connection).await;
     let rows = sqlx::query(query_string).fetch_all(&pool).await;
 
     // if no errors return and rows isn't empty then return those rows, otherwise panic
@@ -51,14 +54,16 @@ pub async fn query(query_string: &str, database: &str, log: &Log, config: &Confi
     }
 }
 
-pub async fn get_connection(database_name: &str, log: &Log, config: &Config) -> Pool<MySql> {
+pub async fn get_connection(log: &Log, db_config: &DatabaseConfig) -> Pool<MySql> {
+    //TODO: Figure out where to pass this later
+    let database_name = "ComparisonData";
     let connection_string =
         format!(
             "mysql://{}:{}@{}:{}/{}",
-            config.database_1_config.db_user,
-            config.database_1_config.db_password,
-            config.database_1_config.db_host,
-            config.database_1_config.db_port,
+            db_config.db_user,
+            db_config.db_password,
+            db_config.db_host,
+            db_config.db_port,
             "ComparisonData"
         );
 
@@ -80,12 +85,9 @@ pub async fn get_connection(database_name: &str, log: &Log, config: &Config) -> 
 
 /// given a table now select 1 row from the table and extract
 /// a list of columns and the primary key
-pub async fn get_table_data(table_name: &str, log: &Log, config: &Config) -> TableData {
-    let pool = get_connection("ComparisonData", log, config).await;
-    //BUG: This isn't getting populated for some reason
-
-    let select_query = format!("select * from {} limit 1", table_name);
-
+pub async fn get_table_data(log: &Log, config:&DatabaseConfig) -> TableData {
+    let pool = get_connection(log, config).await;
+    let select_query = format!("select * from {} limit 1", config.table_name);
     let result = sqlx::query(&select_query).fetch_one(&pool).await;
     match result {
         Ok(row) => {
@@ -97,7 +99,7 @@ pub async fn get_table_data(table_name: &str, log: &Log, config: &Config) -> Tab
 
             //TODO: add support to extract the actual primary key
             TableData {
-                table_name: table_name.to_string(),
+                table_name: config.table_name.to_string(),
                 columns: column_names,
                 primary_key: "id".to_string(),
             }

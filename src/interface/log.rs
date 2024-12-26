@@ -41,6 +41,10 @@ impl Log {
         }
     }
 
+    pub fn set_output_type(&mut self, log_type: LogOutput) {
+        self.log_type = log_type;
+    }
+
     pub fn set_verbose(&mut self, verbose: LogVerbosity) {
         self.verbose = verbose;
     }

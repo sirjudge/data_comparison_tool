@@ -12,8 +12,7 @@ use crate::{
     interface::{
         log::Log,
         config::{
-            Config,
-            OutputFileType
+            Config, OutputFileType
         },
     },
 };
@@ -21,9 +20,9 @@ use crate::{
 pub fn run(config: &Config, log: &Log) -> ComparisonData {
     // if the generate data flag is set then generate the data
     // for the two tables passed in
-    if config.generate_data {
+    if config.data_generation.generate_data {
         generator::generate_data(config, log);
-        log.info(&format!("Generated {} rows for each table", config.number_of_rows_to_generate));
+        log.info(&format!("Generated {} rows for each table", config.data_generation.number_of_rows_to_generate));
     }
 
     // if the clean flag is set then clean up the sqlite databses
@@ -59,8 +58,8 @@ fn compare_data(config: &Config, log: &Log) -> ComparisonData {
 
 
     // extract mysql data ino the table data struct
-    let table_1_data = block_on(mysql::get_table_data(&comp_data_1.table_name, log, config));
-    let table_2_data = block_on(mysql::get_table_data(&comp_data_2.table_name, log, config));
+    let table_1_data = block_on(mysql::get_table_data(log, &config.database_1_config));
+    let table_2_data = block_on(mysql::get_table_data(log, &config.database_2_config));
 
     // declare query_1 and query_2 variables but don't give them a value
     let mut query_1 = comp_data_1.query.clone();
@@ -78,9 +77,8 @@ fn compare_data(config: &Config, log: &Log) -> ComparisonData {
     // Consider coming back here
 
     // generate the select statements + return the rows generated from the select statement
-    let database_name = "test";
-    let mysql_rows_1= block_on(mysql::query(&query_1,database_name, log, config));
-    let mysql_rows_2 = block_on(mysql::query(&query_2, database_name, log, config));
+    let mysql_rows_1= block_on(mysql::query(&query_1, &comp_data_1, log, config));
+    let mysql_rows_2 = block_on(mysql::query(&query_2, &comp_data_2, log, config));
 
     let mut now = SystemTime::now();
     block_on(transformer::mysql_table_to_sqlite_table(&mysql_rows_1, &table_1_data, log));
