@@ -38,6 +38,6 @@ query = "SELECT * FROM b_test_table_1"
 [comparison_options]
 create_sqlite_comparison_files = true
 in_memory_sqlite = false
-output_file_name = "nicos_comparison"
+output_file_name = "nicos_comparison.csv"
 output_file_type = "Csv"
 clean = true
