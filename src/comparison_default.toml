@@ -3,8 +3,8 @@ version = false
 help = false
 
 [data_generation]
-generate_data = false
-number_of_rows_to_generate = 0
+generate_data = true
+number_of_rows_to_generate = 100
 clean = true
 
 [log_config]
@@ -12,7 +12,7 @@ log_level = "DEBUG"
 log_file = "test.log"
 verbose = true
 help = false
-auto_yes = false
+auto_yes = true
 log_output_type = "File"
 
 [database_1_config]
@@ -32,12 +32,12 @@ db_port = 3306
 db_user = "nico"
 db_password = "RealPassw0rd"
 db_host = "localhost"
-table_name = "a_test_table1"
-query = "SELECT * FROM a_test_table1"
+table_name = "b_test_table_1"
+query = "SELECT * FROM b_test_table_1"
 
 [comparison_options]
 create_sqlite_comparison_files = true
 in_memory_sqlite = true
 output_file_name = "nicos_comparison"
 output_file_type = "Csv"
-clean = false
+clean = true

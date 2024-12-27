@@ -112,10 +112,8 @@ fn compare_data(config: &Config, log: &Log) -> ComparisonData {
             sqlite::compare_tables(
                 &table_1_data,
                 &table_2_data,
-                config.comparison_options.create_sqlite_comparison_files,
-                config.comparison_options.in_memory_sqlite,
                 log,
-                config.log_config.auto_yes
+                config
             )
         );
 

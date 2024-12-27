@@ -1,5 +1,8 @@
 use crate::{
-    interface::log::Log,
+    interface::{
+        log::Log,
+        config::Config
+    },
     models::{
         comparison_data::ComparisonData,
         table_data::TableData,
@@ -81,39 +84,18 @@ pub async fn drop_table(table_name: &str, log: &Log) {
 pub async fn compare_tables (
     table_data_1: &TableData,
     table_data_2: &TableData,
-    mut create_sqlite_comparison_files: bool,
-    in_memory_sqlite: bool,
     log: &Log,
-    auto_yes: bool
+    config: &Config
 ) -> ComparisonData {
-    if in_memory_sqlite && create_sqlite_comparison_files {
-        log.info("using in memory sqlite for data comparison,
-             this will be faster but will not save the comparison
-             data to disk, do you want to continue? (yes/no)",
-        );
-
-        // read from std in
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input).unwrap();
-        //TODO: take in input args auto-yes flag to pass down to here
-        if input == "yes\n" || input == "y" || auto_yes {
-            log.info("continuing with in memory sqlite");
-            create_sqlite_comparison_files = false;
-        } else {
-            log.info("exiting program");
-            std::process::exit(0);
-        }
-    }
-
     // get the sqlite connection, and execute each part of the comparison
     let sqlite_pool = self::get_connection(log).await;
-
+    let create_sqlite_files = config.comparison_options.create_sqlite_comparison_files;
     let comparison_data = ComparisonData::new(
         get_unique_rows(
             table_data_1,
             table_data_2,
             &sqlite_pool,
-            create_sqlite_comparison_files,
+            create_sqlite_files,
             log,
         )
         .await,
@@ -121,7 +103,7 @@ pub async fn compare_tables (
             table_data_2,
             table_data_1,
             &sqlite_pool,
-            create_sqlite_comparison_files,
+            create_sqlite_files,
             log,
         )
         .await,
@@ -129,7 +111,7 @@ pub async fn compare_tables (
             table_data_1,
             table_data_2,
             &sqlite_pool,
-            create_sqlite_comparison_files,
+            create_sqlite_files,
             log,
         )
         .await,
@@ -327,7 +309,6 @@ async fn get_unique_rows(
         //TODO: This works for now to get it stable but should come back and revisit
         // this at some point to handle a bit more gracefully than whoops lol your prev
         // data is gone
-        // Drop the table if it exists
         if check_if_table_exists(&sqlite_table_1.table_name, sqlite_pool).await {
             log.warn(&format!("table {} already exists, dropping table", sqlite_table_1.table_name));
             drop_table(&format!("unique_{}", sqlite_table_1.table_name), log).await;
