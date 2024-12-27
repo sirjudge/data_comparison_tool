@@ -5,6 +5,7 @@ help = false
 [data_generation]
 generate_data = true
 number_of_rows_to_generate = 20
+clean = true
 
 [log_config]
 log_level = "DEBUG"

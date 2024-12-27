@@ -71,6 +71,7 @@ pub enum OutputFileType {
 pub struct DataGeneration {
     pub generate_data: bool,
     pub number_of_rows_to_generate: i32,
+    pub clean: bool
 }
 
 impl Default for Config {
@@ -80,6 +81,7 @@ impl Default for Config {
             data_generation: DataGeneration {
                 generate_data: false,
                 number_of_rows_to_generate: 0,
+                clean: false
             },
             comparison_options: ComparisonOptions {
                 output_file_name: format!("comparison_output_{}.csv", now.format("%Y%m%d%H%M%S")),

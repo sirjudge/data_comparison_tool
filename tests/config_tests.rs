@@ -9,11 +9,11 @@ pub fn default_config(){
     assert!(toml_config.log_config.log_file == "test.log");
 
     // db config
-    assert!(toml_config.database_1_config.db_name == "");
+    assert!(toml_config.database_1_config.db_name.is_empty());
     assert!(toml_config.database_1_config.db_port == 3306);
-    assert!(toml_config.database_1_config.db_password == "");
-    assert!(toml_config.database_1_config.db_user == "");
-    assert!(toml_config.database_1_config.db_host == "");
+    assert!(toml_config.database_1_config.db_password.is_empty());
+    assert!(toml_config.database_1_config.db_user.is_empty());
+    assert!(toml_config.database_1_config.db_host.is_empty());
 }
 
 // currently this is serving as the default test creation

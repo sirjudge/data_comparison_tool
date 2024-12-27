@@ -1,5 +1,4 @@
 use rand::{ thread_rng, Rng};
-use std::time::SystemTime;
 use async_std::task::block_on;
 use crate::{
     datastore::{
@@ -18,10 +17,26 @@ use sqlx::{
     TypeInfo
 };
 
-pub async fn generate_table(config:&config::Config, log:&Log, db_config: &DatabaseConfig){
+pub async fn generate_table(config:&config::Config, log:&Log, db_config: &DatabaseConfig) -> usize {
     log.debug("data creation underway");
-
     let pool = get_connection(log, db_config).await;
+
+    if config.data_generation.clean {
+        log.debug(&format!("dropping table: {}", db_config.table_name));
+        let drop_table_query = format!("DROP TABLE IF EXISTS {}", db_config.table_name);
+        let result = sqlx::query(&drop_table_query)
+            .execute(&pool)
+            .await;
+        match result {
+            Ok(_) => {
+                log.debug(&format!("dropped table: {}", db_config.table_name));
+            }
+            Err(error) => {
+                panic!("error: {:?}", error);
+            }
+        }
+    }
+
     let create_new_table_query = format!(
         "CREATE TABLE IF NOT EXISTS {}
         (
@@ -78,7 +93,9 @@ pub async fn generate_table(config:&config::Config, log:&Log, db_config: &Databa
         .execute(&pool)
         .await;
     match result {
-        Ok(_) => { }
+        Ok(result) => {
+            result.rows_affected() as usize
+        }
         Err(error) => {
             panic!("error: {:?}", error);
         }
@@ -95,8 +112,7 @@ pub fn generate_data(config: &config::Config, log: &Log) {
     block_on(generate_table(config, log, &config.database_1_config));
 
     log.debug("starting second data generation");
-    block_on(generate_table(config, log, &config.database_1_config));
-
+    block_on(generate_table(config, log, &config.database_2_config));
 }
 
 /// using thread_rng generate a random number between 1 and max
