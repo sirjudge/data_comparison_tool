@@ -38,7 +38,7 @@ pub fn run(config: &Config, log: &Log) -> ComparisonData {
         log.info(&format!("exporting data to file: {}", config.comparison_options.output_file_name));
         match config.comparison_options.output_file_type {
             OutputFileType::Csv => {
-                csv::export_comparison_data_to_csv(&result, &config.comparison_options.output_file_name, log);
+                csv::export(&result, &config.comparison_options.output_file_name, log);
             }
             OutputFileType::Json => {
                 panic!("JSON export not implemented yet");
@@ -63,12 +63,11 @@ fn compare_data(config: &Config, log: &Log) -> ComparisonData {
 
     // declare query_1 and query_2 variables but don't give them a value
     let mut query_1 = comp_data_1.query.clone();
-    let mut query_2 = comp_data_2.query.clone();
-
     if query_1.is_empty()  {
         query_1 = format!("select * from {}", comp_data_1.table_name);
     }
 
+    let mut query_2 = comp_data_2.query.clone();
     if query_2.is_empty()  {
         query_2 = format!("select * from {}", comp_data_2.table_name);
     }
@@ -77,8 +76,8 @@ fn compare_data(config: &Config, log: &Log) -> ComparisonData {
     // Consider coming back here
 
     // generate the select statements + return the rows generated from the select statement
-    let mysql_rows_1= block_on(mysql::query(&query_1, &comp_data_1, log, config));
-    let mysql_rows_2 = block_on(mysql::query(&query_2, &comp_data_2, log, config));
+    let mysql_rows_1 = block_on(mysql::query(&query_1, comp_data_1, log, config));
+    let mysql_rows_2 = block_on(mysql::query(&query_2, comp_data_2, log, config));
 
     let mut now = SystemTime::now();
     block_on(transformer::mysql_table_to_sqlite_table(&mysql_rows_1, &table_1_data, log));

@@ -1,7 +1,6 @@
 use data_comparison_tool::datastore::{
     mysql,
-    generator,
-    sqlite
+    generator
 };
 use async_std::task::block_on;
 pub mod test_utils;

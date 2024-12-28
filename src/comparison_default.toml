@@ -17,7 +17,7 @@ log_output_type = "File"
 
 [database_1_config]
 database_type="MySql"
-db_name = "test_db"
+db_name = "ComparisonData"
 db_port = 3306
 db_user = "nico"
 db_password = "RealPassw0rd"
@@ -27,7 +27,7 @@ query = "SELECT * FROM a_test_table_1"
 
 [database_2_config]
 database_type="MySql"
-db_name = "test_db"
+db_name = "ComparisonData"
 db_port = 3306
 db_user = "nico"
 db_password = "RealPassw0rd"
@@ -38,6 +38,6 @@ query = "SELECT * FROM b_test_table_1"
 [comparison_options]
 create_sqlite_comparison_files = true
 in_memory_sqlite = true
-output_file_name = "nicos_comparison"
+output_file_name = "nicos_comparison.csv"
 output_file_type = "Csv"
 clean = true

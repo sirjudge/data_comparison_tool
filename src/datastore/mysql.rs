@@ -35,7 +35,7 @@ pub async fn drop_table(db_connection:&DatabaseConfig, log: &Log) {
 
 /// open a connection to the mysql databse, executes the query and then
 /// returns a vector of the rows returned
-pub async fn query(query_string: &str, db_connection:&DatabaseConfig, log: &Log, config: &Config) -> Vec<MySqlRow> {
+pub async fn query(query_string: &str, db_connection:&DatabaseConfig, log: &Log, _config: &Config) -> Vec<MySqlRow> {
     // open a connection to the test db and execute the query
     let pool = get_connection(log, db_connection).await;
     let rows = sqlx::query(query_string).fetch_all(&pool).await;
@@ -56,7 +56,6 @@ pub async fn query(query_string: &str, db_connection:&DatabaseConfig, log: &Log,
 
 pub async fn get_connection(log: &Log, db_config: &DatabaseConfig) -> Pool<MySql> {
     //TODO: Figure out where to pass this later
-    let database_name = "ComparisonData";
     let connection_string =
         format!(
             "mysql://{}:{}@{}:{}/{}",
@@ -64,7 +63,7 @@ pub async fn get_connection(log: &Log, db_config: &DatabaseConfig) -> Pool<MySql
             db_config.db_password,
             db_config.db_host,
             db_config.db_port,
-            "ComparisonData"
+            db_config.db_name
         );
 
     let result = MySqlPoolOptions::new()
@@ -74,7 +73,7 @@ pub async fn get_connection(log: &Log, db_config: &DatabaseConfig) -> Pool<MySql
 
     match result {
         Ok(pool) => {
-            log.info(&format!("connected to mysql database: {}", database_name));
+            log.info(&format!("connected to mysql database: {}", db_config.db_name));
             pool
         },
         Err(error) => {
