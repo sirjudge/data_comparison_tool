@@ -40,7 +40,7 @@ pub fn run(config: &Config, log: &Log) -> ComparisonData {
             OutputFileType::Csv => {
                 csv::export(&result, &config.comparison_options.output_file_name, log);
             }
-            OutputFileType::Json => {
+            _ => {
                 panic!("JSON export not implemented yet");
             }
         }

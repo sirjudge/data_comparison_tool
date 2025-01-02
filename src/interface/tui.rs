@@ -22,11 +22,16 @@ use ratatui::{
 };
 use std::{io, io::Stdout};
 
-/// State management for the UI
-/// I'm aware this may not be the best way to do this
-/// but as a wise sage once said "I'm just a girl trying to do her best"
+/// Current state the UI is in
 static mut CURRENT_STATE: UIState = UIState::StartUp;
+
+/// Previous state the UI was in. This is used to verify if we have a
+/// state change and handle re-rendering if the two don't match
 static mut PREVIOUS_STATE: UIState = UIState::StartUp;
+
+/// current comparison data to display in the UI or return. This is set
+/// to 'None' at the start in case there's an error and no data should be
+/// returned
 static mut COMPARISON_DATA: Option<ComparisonData> = None;
 
 pub fn set_state(state: UIState, log: &Log) {
@@ -69,8 +74,7 @@ pub fn set_comparison_data(data: ComparisonData) {
 // here instead to create a raw pointer
 // doing that would require changing the signature of this
 // which then causes the fact that ComparisonData does not have the
-// clone or copy trait on the sqlx types
-// so for now we'll just ignore this for now
+// clone or copy trait on the sqlx types. This is a bit of a rabbit hole
 pub fn get_comparison_data() -> Option<&'static ComparisonData> {
     unsafe {
         match &COMPARISON_DATA {
