@@ -9,11 +9,6 @@ use data_comparison_tool::{
 };
 
 fn main() -> Result<(), io::Error> {
-    //TODO: Figure out absolute vs relative paths here
-    // the path passed below is relative to wherever the command for CLI
-    // is run from (ex. if in repo root, it'll properly identify the file
-    // but if you `cd src` and then run it won't find the file)
-    let toml_path = "src/comparison_default.toml";
     let config = Config::new(toml_path);
     let log = Log::new(&config);
 
