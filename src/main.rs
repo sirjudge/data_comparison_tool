@@ -24,7 +24,7 @@ fn main() -> Result<(), io::Error> {
     }
 
     // if the TUI flag is passed in run the terminal and early return
-    if config.tui {
+    if config.globals.tui {
         let result = tui::run_terminal(&config, &log);
         ratatui::restore();
         return result;

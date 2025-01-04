@@ -9,9 +9,6 @@ pub enum DatabaseType {
     Sqlite
 }
 
-//TODO: Starting names off a bit heavy handed with longer
-//names, think about cutting down later or just calling the slightly
-//more descriptive names acceptable
 #[derive(Deserialize)]
 pub struct Config {
     pub comparison_options: ComparisonOptions,
@@ -19,6 +16,11 @@ pub struct Config {
     pub database_1_config: DatabaseConfig,
     pub database_2_config: DatabaseConfig,
     pub data_generation: DataGeneration,
+    pub globals: Globals
+}
+
+#[derive(Deserialize)]
+pub struct Globals {
     pub tui: bool,
     pub version: bool
 }
@@ -42,10 +44,6 @@ pub struct LogConfig {
     pub log_output_type: LogOutput,
 }
 
-// TODO: The following double init is hacky
-// but it works. Might not be worth too much more hassle
-// but should definitely be re-visited if optimization
-// is required
 #[derive(Deserialize)]
 pub struct DatabaseConfig {
     // connection level
@@ -78,10 +76,14 @@ impl Default for Config {
     fn default() -> Self {
         let now = Local::now();
         Config {
+            globals: Globals {
+                tui: false,
+                version: false
+            },
             data_generation: DataGeneration {
                 generate_data: false,
                 number_of_rows_to_generate: 0,
-                clean: false
+                clean: false,
             },
             comparison_options: ComparisonOptions {
                 output_file_name: format!("comparison_output_{}.csv", now.format("%Y%m%d%H%M%S")),
@@ -99,8 +101,6 @@ impl Default for Config {
                 auto_yes: false,
                 log_output_type: LogOutput::File,
             },
-            tui: false,
-            version: false,
             database_1_config: DatabaseConfig {
                 db_name: String::from(""),
                 db_user: String::from(""),

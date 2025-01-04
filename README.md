@@ -1,12 +1,9 @@
 # Description
-- Rust based CLI tool to compare two input data sources and generate a data set of
-unqiue rows in each data source and common rows in both data sources that have changed
-or kept the same
+- Rust based CLI tool to compare two input data sources and generate a data set of unique rows in each data source and common rows in both data sources that have changed or kept the same
 
 # Dependencies
 ## Build from source
 - Install and configure the [cargo package manager and rust toolchain](https://doc.rust-lang.org/cargo/getting-started/installation.html)
-
 
 # Running and debugging and compiling
 ### Compilation

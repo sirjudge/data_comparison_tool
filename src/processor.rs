@@ -12,7 +12,8 @@ use crate::{
     interface::{
         log::Log,
         config::{
-            Config, OutputFileType
+            Config,
+            OutputFileType
         },
     },
 };
