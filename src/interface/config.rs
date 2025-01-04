@@ -128,45 +128,86 @@ impl Default for Config {
 }
 
 impl Config {
-    pub fn new (toml_file_path: &str) -> Config {
-        let toml_str = std::fs::read_to_string(toml_file_path).unwrap();
-        let config: Config =
-            match toml::from_str(&toml_str) {
-                Ok(config) => config,
-                Err(e) => {
-                    println!("Error parsing toml file:{} with error:{}", toml_file_path ,e);
-                    panic!("Uh oh spaghetti-o's");
-                }
-            };
+    pub fn new() -> Config {
+        // if we have -config flag, parse the config file first before
+        // applying cli arguments
+        let args: Vec<String>= std::env::args().collect();
+        if args.contains(&"-config".to_string()) {
+            let config_index = args.iter().position(|x| x == "-config").unwrap();
+            let config_file = &args[config_index + 1];
+            Config::from_config_file(config_file);
+        }
 
-        config
+        Config::from_arguments()
+    }
+
+    pub fn from_config_file(config_file_path: &str) -> Config {
+        // load config file into a a string
+        match std::fs::read_to_string(config_file_path){
+
+
+            Ok(config_string) => {
+                // if we successfully read into a string parse the toml
+                let verbose = true;
+                if verbose {
+                    println!("successfully read config file:{}", config_file_path);
+                    println!("config_string:{}", config_string);
+                }
+                let config: Config =
+                    match toml::from_str(&config_string) {
+                        Ok(config) => config,
+                        Err(e) => {
+                            panic!("Error parsing toml file:{} with error:{}", config_file_path ,e);
+                        }
+                    };
+
+                if !Self::validate_config(&config).is_empty() {
+                    panic!("Invalid configuration detected");
+                }
+                config
+            },
+            Err(e) => {
+                panic!("Error reading config file:{} with error:{}", config_file_path ,e);
+            }
+        }
+
     }
 
     /// if args is empty or only contains the program name return the
     /// default config otherwise parse the arguments and return the default
-    /// config with the arguments applied
+    /// config with the arguments applied. If the -config flag is passed in it
+    /// will parse the config file first and then overwrite the file options
+    /// with any CLI flags passed in
     pub fn from_arguments() -> Config {
+        println!("Parsing CLI arguments");
         let mut config: Config = Config::default();
         let args: Vec<String> = std::env::args().collect();
+
+        // if args is empty return default config
         if args.is_empty() {
             return config;
         }
 
+        // loop through each flag and apply the key value paris
         for arg in args.iter() {
-            // if arg has = split on = and parse into key value
+            // handle key/value pairs if = is present in the flag
             if arg.contains("=") {
                 let arg_parts: Vec<&str> = arg.split("=").collect();
                 let key = arg_parts[0];
                 let value = arg_parts[1];
                 match key {
-                    "-q1" => config.database_1_config.query = value.to_string(),
-                    "-q2" => config.database_2_config.query = value.to_string(),
                     "-t1" => config.database_1_config.table_name = value.to_string(),
                     "-t2" => config.database_2_config.table_name = value.to_string(),
                     "-output" => config.comparison_options.output_file_name = value.to_string(),
+                    "-gen" => {
+                        config.data_generation.generate_data = true;
+                        config.data_generation.number_of_rows_to_generate = value.parse().unwrap();
+                    },
                     _ => {}
                 }
             }
+            // handle flags without values that act as true/false if they
+            // exist or don't
             else {
                 match arg.as_str() {
                     "-h" | "-help" => {
@@ -205,6 +246,78 @@ impl Config {
             }
         }
 
-        config
+        let errors = Self::validate_config(&config);
+        if !errors.is_empty() {
+            config
+        }
+        else {
+            panic!("Invalid configuration detected");
+        }
+    }
+
+    pub fn validate_db_config(config: &DatabaseConfig) -> Vec<String> {
+        let mut errors: Vec<String> = Vec::new();
+
+        if config.db_name.is_empty()
+        {
+            errors.push("empty database name".to_string());
+        }
+
+        if config.db_user.is_empty()
+        {
+            errors.push("empty database user".to_string());
+        }
+
+        if config.db_password.is_empty()
+        {
+            errors.push("empty database password".to_string());
+        }
+
+        if config.db_host.is_empty()
+        {
+            errors.push("empty database host".to_string());
+        }
+
+        if config.table_name.is_empty()
+        {
+            errors.push("empty table name".to_string());
+        }
+
+        errors
+    }
+
+    pub fn validate_config(config: &Config) -> Vec<String> {
+        // initialize empty list of strings for
+        // any errors that happen during validation
+        let mut errors: Vec<String> = Vec::new();
+
+        println!();
+        println!("{}BEGIN VALIDATION{}", "=".repeat(10), "=".repeat(10));
+        println!();
+        // database connection validation
+        let db_1_validation = &mut Self::validate_db_config(&config.database_1_config);
+        if !db_1_validation.is_empty() {
+            println!("db_1_validation: {:?}", db_1_validation);
+            println!();
+            errors.append(db_1_validation);
+        }
+        let db_2_validation = &mut Self::validate_db_config(&config.database_1_config);
+        if !db_2_validation.is_empty() {
+            println!("db_2_validation: {:?}", db_2_validation);
+            println!();
+            errors.append(db_2_validation);
+        }
+
+        if errors.is_empty() {
+            println!("Configuration is valid");
+        }
+        else {
+            println!("Configuration is invalid: {:?}", errors);
+        }
+        // print any errors that occur during runtime
+        println!();
+        println!("{}END VALIDATION{}", "=".repeat(10), "=".repeat(10));
+
+        errors
     }
 }

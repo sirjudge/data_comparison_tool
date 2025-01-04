@@ -1,6 +1,8 @@
+[globals]
 tui = false
 version = false
 help = false
+config_file_path = "src/comparison_default.toml"
 
 [data_generation]
 generate_data = true

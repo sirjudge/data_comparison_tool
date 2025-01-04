@@ -17,7 +17,7 @@ use async_std::task::block_on;
 // todo: should have a method here that generates the data for the tables on start up and then does
 // the same on tear down
 pub fn setup() -> (Config, Log) {
-    let config = Config::new("tests/comp.toml");
+    let config = Config::from_config_file("tests/comp.toml");
     let mut log = Log::new(&config);
     log.set_verbose(LogVerbosity::Debug);
     log.set_output_type(LogOutput::Console);

@@ -19,6 +19,6 @@ pub fn default_config(){
 // currently this is serving as the default test creation
 #[test]
 pub fn comparison_default_toml_file_parse_ok(){
-    let toml_config = config::Config::new("src/comparison_default.toml");
+    let toml_config = config::Config::from_config_file("src/comparison_default.toml");
     assert!(toml_config.log_config.log_level == "DEBUG");
 }

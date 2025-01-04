@@ -55,7 +55,7 @@ pub async fn query(query_string: &str, db_connection:&DatabaseConfig, log: &Log,
 }
 
 pub async fn get_connection(log: &Log, db_config: &DatabaseConfig) -> Pool<MySql> {
-    //TODO: Figure out where to pass this later
+    log.info(&format!("connecting to mysql database: {}", db_config.db_name));
     let connection_string =
         format!(
             "mysql://{}:{}@{}:{}/{}",
