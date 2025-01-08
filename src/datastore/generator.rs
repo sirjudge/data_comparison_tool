@@ -1,15 +1,12 @@
-use async_std::task::block_on;
 use rand::{ thread_rng, Rng};
-use std::time::SystemTime;
+use async_std::task::block_on;
 use crate::{
     datastore::{
         mysql::get_connection,
-        transformer::mysql_type_to_sqlite_type,
-        generator
+        transformer::mysql_type_to_sqlite_type
     },
     interface::{
-        log::Log,
-        argument_parser
+        config::{self, DatabaseConfig}, log::Log
     },
 };
 use sqlx::{
@@ -20,47 +17,26 @@ use sqlx::{
     TypeInfo
 };
 
-
-/// if args.generate_data is set then generate the data for the two tables
-pub fn generate_data(args: &argument_parser::Arguments, log: &Log){
-    if !args.generate_data {
-        log.info("skipping data generation");
-        return
-    };
-
+pub async fn generate_table(config:&config::Config, log:&Log, db_config: &DatabaseConfig) -> usize {
     log.debug("data creation underway");
-    let mut now = SystemTime::now();
-    block_on(generator::create_new_mysql_table_data(args.number_of_rows_to_generate, &args.table_name_1, log));
-    match now.elapsed(){
-        Ok(elapsed) => {
-            // implement a profiling system to only measure if that flag is set
-            let log_message = format!("Time it took to create data: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
-            log.debug(&log_message);
-        }
-        Err(e) => {
-            panic!("An error occured: {:?}", e);
+    let pool = get_connection(log, db_config).await;
+
+    if config.data_generation.clean {
+        log.debug(&format!("dropping table: {}", db_config.table_name));
+        let drop_table_query = format!("DROP TABLE IF EXISTS {}", db_config.table_name);
+        let result = sqlx::query(&drop_table_query)
+            .execute(&pool)
+            .await;
+        match result {
+            Ok(_) => {
+                log.debug(&format!("dropped table: {}", db_config.table_name));
+            }
+            Err(error) => {
+                panic!("error: {:?}", error);
+            }
         }
     }
 
-    log.debug("starting second data generation");
-    now = SystemTime::now();
-
-    //block_on(generator::create_new_mysql_table_data(args.number_of_rows_to_generate, &args.table_name_2, log));
-    block_on(generator::create_new_mysql_table_data(args.number_of_rows_to_generate, &args.table_name_2, log));
-    match now.elapsed(){
-        Ok(elapsed) => {
-            let log_message = format!("Time it took to create 2nd table: {}.{}", elapsed.as_secs(),elapsed.subsec_millis());
-            log.debug(&log_message);
-        }
-        Err(e) => {
-            panic!("An error occured: {:?}", e);
-        }
-    }
-}
-
-pub async fn create_new_mysql_table_data(num_rows_to_generate: i32, table_name: &str, log: &Log){
-    let pool = get_connection("test", log).await;
-    //TODO: This should be more configurable
     let create_new_table_query = format!(
         "CREATE TABLE IF NOT EXISTS {}
         (
@@ -70,19 +46,20 @@ pub async fn create_new_mysql_table_data(num_rows_to_generate: i32, table_name: 
             randomString VARCHAR(255) NOT NULL,
             secondRandomString VARCHAR(255) NOT NULL,
             PRIMARY KEY (id)
-        )", table_name);
+        )", db_config.table_name);
 
     let result = sqlx::query(&create_new_table_query)
         .execute(&pool)
         .await;
     match result {
         Ok(_) => {
-            log.info(&format!("created new mysql table: {}", table_name));
+            log.debug(&format!("created table: {}", db_config.table_name));
         }
         Err(error) => {
             panic!("error: {:?}", error);
         }
     }
+
 
     //OPTIMIZE: this is a really painful thing to see, we should be able to
     //do this a bit faster than making one huge string as an insert statement
@@ -96,14 +73,14 @@ pub async fn create_new_mysql_table_data(num_rows_to_generate: i32, table_name: 
         format!(
             "INSERT INTO {}
             (randomNumber,secondRandomNumber,randomString,secondRandomString)
-            VALUES ", table_name
+            VALUES ", db_config.table_name
         );
 
-    for _i in 0..num_rows_to_generate {
+    for _i in 0..config.data_generation.number_of_rows_to_generate {
         insert_query.push_str(
             &format!(
                 "({},'{}','{}','{}'),",
-                random_long(100),
+                random_long(500),
                 random_long(100),
                 random_string(4),
                 random_string(4)
@@ -116,11 +93,26 @@ pub async fn create_new_mysql_table_data(num_rows_to_generate: i32, table_name: 
         .execute(&pool)
         .await;
     match result {
-        Ok(_) => { }
+        Ok(result) => {
+            result.rows_affected() as usize
+        }
         Err(error) => {
             panic!("error: {:?}", error);
         }
     }
+}
+
+pub fn generate_data(config: &config::Config, log: &Log) {
+    if !config.data_generation.generate_data {
+        log.info("generate_data flag is off, skipping data generation");
+        return
+    };
+
+    log.debug("starting first data generation");
+    block_on(generate_table(config, log, &config.database_1_config));
+
+    log.debug("starting second data generation");
+    block_on(generate_table(config, log, &config.database_2_config));
 }
 
 /// using thread_rng generate a random number between 1 and max

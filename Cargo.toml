@@ -15,6 +15,7 @@ tokio = {version="1.36.0", feature = ["full", "rt", "macros"] }
 crossterm = "0.25"
 ratatui = "0.29.0"
 toml = "0.8.19"
+serde = { version = "1.0.130", features = ["derive"] }
 
 [term]
 quiet = false          # whether cargo output is quiet

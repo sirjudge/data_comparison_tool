@@ -5,7 +5,7 @@ use crate::{
             get_string_from_state
         },
         log::Log,
-        argument_parser,
+        config::Config
     },
     models::comparison_data::ComparisonData,
     processor,
@@ -22,11 +22,16 @@ use ratatui::{
 };
 use std::{io, io::Stdout};
 
-/// State management for the UI
-/// I'm aware this may not be the best way to do this
-/// but as a wise sage once said "I'm just a girl trying to do her best"
+/// Current state the UI is in
 static mut CURRENT_STATE: UIState = UIState::StartUp;
+
+/// Previous state the UI was in. This is used to verify if we have a
+/// state change and handle re-rendering if the two don't match
 static mut PREVIOUS_STATE: UIState = UIState::StartUp;
+
+/// current comparison data to display in the UI or return. This is set
+/// to 'None' at the start in case there's an error and no data should be
+/// returned
 static mut COMPARISON_DATA: Option<ComparisonData> = None;
 
 pub fn set_state(state: UIState, log: &Log) {
@@ -69,8 +74,7 @@ pub fn set_comparison_data(data: ComparisonData) {
 // here instead to create a raw pointer
 // doing that would require changing the signature of this
 // which then causes the fact that ComparisonData does not have the
-// clone or copy trait on the sqlx types
-// so for now we'll just ignore this for now
+// clone or copy trait on the sqlx types. This is a bit of a rabbit hole
 pub fn get_comparison_data() -> Option<&'static ComparisonData> {
     unsafe {
         match &COMPARISON_DATA {
@@ -89,7 +93,7 @@ pub fn get_comparison_data() -> Option<&'static ComparisonData> {
 fn draw_and_handle_state(
     terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>,
     log: &Log,
-    args: &argument_parser::Arguments,
+    config: &Config,
 ) -> Result<(), std::io::Error> {
     // if state is startup, do start up stuff
     if get_state() == UIState::StartUp {
@@ -132,7 +136,8 @@ fn draw_and_handle_state(
 
             // TOOD: This should be done in draw_running but is done
             // here to avoid lifetime and ownership conflictions
-            let comparison_data = processor::run(args, log);
+            let comparison_data =
+                processor::run(config, log);
             set_comparison_data(comparison_data);
             log.debug("comparison complete, setting state to results");
             set_state(UIState::Results, log);
@@ -196,7 +201,7 @@ fn result_key_events(key: KeyCode, log: &Log) {
 
 /// Initialize the terminal UI, run start up tasks, and then display
 /// the main menu to the user
-pub fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::Result<()> {
+pub fn run_terminal(config: &Config, log: &Log) -> io::Result<()> {
     // initialize terminal and state of the UI and set the state to main menu
     let mut terminal = ratatui::init();
     log.debug("ratatui Terminal initialized");
@@ -206,7 +211,7 @@ pub fn run_terminal(args: &argument_parser::Arguments, log: &Log) -> io::Result<
     // mysql or sqlite not being re-initialized
     loop {
         // handle and render the current state and after the state has changed hanlde key events
-        match draw_and_handle_state(&mut terminal, log, args) {
+        match draw_and_handle_state(&mut terminal, log, config) {
             Ok(()) => {
                 log.info(&format!("current state: {:?}",
                     get_string_from_state(get_state())

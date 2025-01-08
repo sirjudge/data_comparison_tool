@@ -11,35 +11,56 @@ use crate::{
     models::comparison_data::ComparisonData,
     interface::{
         log::Log,
-        argument_parser,
-        argument_parser::OutputFileType
+        config::{
+            Config,
+            OutputFileType
+        },
     },
 };
 
-pub fn run(args: &argument_parser::Arguments, log: &Log) -> ComparisonData {
+pub fn print_config(config: &Config, log: &Log) {
+    log.info("Configuration:");
+    log.info(&format!("database 1 db_name: {}", config.database_1_config.db_name));
+    log.info(&format!("database 1 host: {}", config.database_1_config.db_host));
+    log.info(&format!("database 2 db_name: {}", config.database_1_config.db_name));
+    log.info(&format!("database 2 host: {}", config.database_1_config.db_host));
+    log.info(&format!("table 1: {}", config.database_1_config.table_name));
+    log.info(&format!("table 2: {}", config.database_2_config.table_name));
+    log.info(&format!("output file name: {}", config.comparison_options.output_file_name));
+    log.info(&format!("create sqlite comparison files: {}", config.comparison_options.create_sqlite_comparison_files));
+    log.info(&format!("in memory sqlite: {}", config.comparison_options.in_memory_sqlite));
+    log.info(&format!("clean: {}", config.comparison_options.clean));
+    log.info(&format!("data generation: {}", config.data_generation.generate_data));
+    log.info(&format!("number of rows to generate: {}", config.data_generation.number_of_rows_to_generate));
+}
+
+pub fn run(config: &Config, log: &Log) -> ComparisonData {
+    log.debug("Running processor");
+
+
     // if the generate data flag is set then generate the data
     // for the two tables passed in
-    if args.generate_data {
-        generator::generate_data(args, log);
-        log.info(&format!("Generated {} rows for each table", args.number_of_rows_to_generate));
+    if config.data_generation.generate_data {
+        generator::generate_data(config, log);
+        log.info(&format!("Generated {} rows for each table", config.data_generation.number_of_rows_to_generate));
     }
 
     // if the clean flag is set then clean up the sqlite databses
-    if args.clean {
+    if config.comparison_options.clean {
         block_on(sqlite::clear_sqlite_data());
         log.info("cleaned sqlite database");
     }
 
     // compare the table data
-    let result = compare_data(args, log);
+    let result = compare_data(config, log);
 
-    if !args.output_file_name.is_empty() {
-        log.info(&format!("exporting data to file: {}", args.output_file_name));
-        match args.output_file_type {
+    if !config.comparison_options.output_file_name.is_empty() {
+        log.info(&format!("exporting data to file: {}", config.comparison_options.output_file_name));
+        match config.comparison_options.output_file_type {
             OutputFileType::Csv => {
-                csv::export_comparison_data_to_csv(&result, &args.output_file_name, log);
+                csv::export(&result, &config.comparison_options.output_file_name, log);
             }
-            OutputFileType::Json => {
+            _ => {
                 panic!("JSON export not implemented yet");
             }
         }
@@ -48,27 +69,35 @@ pub fn run(args: &argument_parser::Arguments, log: &Log) -> ComparisonData {
     result
 }
 
-fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData {
+fn compare_data(config: &Config, log: &Log) -> ComparisonData {
+
+    let comp_data_1 =  &config.database_1_config;
+    let comp_data_2 =  &config.database_2_config;
+
+    log.debug(&format!("comparing data from {} to {}", comp_data_1.table_name, comp_data_2.table_name));
+
+
     // extract mysql data ino the table data struct
-    let table_1_data = block_on(mysql::get_table_data(&args.table_name_1, log));
-    let table_2_data = block_on(mysql::get_table_data(&args.table_name_2, log));
+    let table_1_data = block_on(mysql::get_table_data(log, &config.database_1_config));
+    let table_2_data = block_on(mysql::get_table_data(log, &config.database_2_config));
 
     // declare query_1 and query_2 variables but don't give them a value
-    let mut query_1 = args.mysql_query_1.clone();
-    let mut query_2 = args.mysql_query_2.clone();
-
+    let mut query_1 = comp_data_1.query.clone();
     if query_1.is_empty()  {
-        query_1 = format!("select * from {}", args.table_name_1);
+        query_1 = format!("select * from {}", comp_data_1.table_name);
     }
 
+    let mut query_2 = comp_data_2.query.clone();
     if query_2.is_empty()  {
-        query_2 = format!("select * from {}", args.table_name_2);
+        query_2 = format!("select * from {}", comp_data_2.table_name);
     }
+
+    // OPTIMIZE: this could be either done in parallel or via a stream? row by row.
+    // Consider coming back here
 
     // generate the select statements + return the rows generated from the select statement
-    let database_name = "test";
-    let mysql_rows_1= block_on(mysql::query(&query_1,database_name, log));
-    let mysql_rows_2 = block_on(mysql::query(&query_2, database_name, log));
+    let mysql_rows_1 = block_on(mysql::query(&query_1, comp_data_1, log, config));
+    let mysql_rows_2 = block_on(mysql::query(&query_2, comp_data_2, log, config));
 
     let mut now = SystemTime::now();
     block_on(transformer::mysql_table_to_sqlite_table(&mysql_rows_1, &table_1_data, log));
@@ -79,7 +108,7 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
         }
 
         Err(e) => {
-            panic!("An error occured: {:?}", e);
+            panic!("An error occured moving mysql table {} to sqlite: {:?}", table_1_data.table_name ,e);
         }
     }
 
@@ -91,7 +120,7 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
             log.info(&log_message);
         }
         Err(e) => {
-            panic!("An error occured: {:?}", e);
+            panic!("An error occured moving mysql table {} to sqlite: {:?}", table_2_data.table_name ,e);
         }
     }
 
@@ -102,10 +131,8 @@ fn compare_data(args: &argument_parser::Arguments, log: &Log) -> ComparisonData 
             sqlite::compare_tables(
                 &table_1_data,
                 &table_2_data,
-                args.create_sqlite_comparison_files,
-                args.in_memory_sqlite,
                 log,
-                args.auto_yes
+                config
             )
         );
 

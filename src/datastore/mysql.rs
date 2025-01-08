@@ -1,6 +1,13 @@
 use crate::{
-    interface::log::Log,
+    interface::{
+        config::{
+            Config,
+            DatabaseConfig
+        },
+        log::Log
+    },
     models::table_data::TableData
+
 };
 use sqlx::{
     Row,
@@ -11,15 +18,14 @@ use sqlx::{
         MySqlRow,
     }
 };
-use std::env;
 
-pub async fn drop_table(table_name: &str, log: &Log) {
-    let pool = get_connection("ComparisonData", log).await;
-    let drop_query = format!("drop table if exists {}", table_name);
+pub async fn drop_table(db_connection:&DatabaseConfig, log: &Log) {
+    let pool = get_connection(log, db_connection).await;
+    let drop_query = format!("drop table if exists {}", db_connection.table_name);
     let result = sqlx::query(&drop_query).execute(&pool).await;
     match result {
         Ok(_) => {
-            log.info(&format!("dropped table: {}", table_name));
+            log.info(&format!("dropped table: {}", db_connection.table_name));
         },
         Err(error) => {
             panic!("error occurred while dropping table: {:?}", error);
@@ -29,9 +35,9 @@ pub async fn drop_table(table_name: &str, log: &Log) {
 
 /// open a connection to the mysql databse, executes the query and then
 /// returns a vector of the rows returned
-pub async fn query(query_string: &str, database: &str, log: &Log) -> Vec<MySqlRow> {
+pub async fn query(query_string: &str, db_connection:&DatabaseConfig, log: &Log, _config: &Config) -> Vec<MySqlRow> {
     // open a connection to the test db and execute the query
-    let pool = get_connection(database, log).await;
+    let pool = get_connection(log, db_connection).await;
     let rows = sqlx::query(query_string).fetch_all(&pool).await;
 
     // if no errors return and rows isn't empty then return those rows, otherwise panic
@@ -48,34 +54,26 @@ pub async fn query(query_string: &str, database: &str, log: &Log) -> Vec<MySqlRo
     }
 }
 
-pub async fn get_connection(database_name: &str, log: &Log) -> Pool<MySql> {
-    let database_name_override = "ComparisonData";
-    // BUG: the connection string is definitely an env variable but is not being populated
-    // correctly.
-    // log.debug("attempting to get mysql connection string from env var");
-    // log.debug(&format!("env vars: {:?}", env::vars()));
+pub async fn get_connection(log: &Log, db_config: &DatabaseConfig) -> Pool<MySql> {
+    log.info(&format!("connecting to mysql database: {}", db_config.db_name));
+    let connection_string =
+        format!(
+            "mysql://{}:{}@{}:{}/{}",
+            db_config.db_user,
+            db_config.db_password,
+            db_config.db_host,
+            db_config.db_port,
+            db_config.db_name
+        );
 
-    let connection_string_env_var = env::var("MYSQL_CONNECTION_STRING_USER");
-    let mysql_connection_string = match connection_string_env_var {
-        Ok(connection_string_env_var) => connection_string_env_var,
-        Err(_) => {
-            log.warn("MYSQL_CONNECTION_STRING_USER not set, using default connection string");
-            format!(
-                "mysql://nico:RealPassw0rd@localhost:3306/{}",
-                database_name_override
-            )
-        },
-    };
-
-    // attempt to connect and handle success/fail accordingly
     let result = MySqlPoolOptions::new()
         .acquire_timeout(std::time::Duration::from_secs(5))
-        .connect(&mysql_connection_string)
+        .connect(&connection_string)
         .await;
 
     match result {
         Ok(pool) => {
-            log.info(&format!("connected to mysql database: {}", database_name));
+            log.info(&format!("connected to mysql database: {}", db_config.db_name));
             pool
         },
         Err(error) => {
@@ -86,12 +84,9 @@ pub async fn get_connection(database_name: &str, log: &Log) -> Pool<MySql> {
 
 /// given a table now select 1 row from the table and extract
 /// a list of columns and the primary key
-pub async fn get_table_data(table_name: &str, log: &Log) -> TableData {
-    let pool = get_connection("ComparisonData", log).await;
-    let select_query = format!("select * from {} limit 1", table_name);
-
-    //BUG: when using `cargo test` this query is failing to look up the table
-    //for some reason
+pub async fn get_table_data(log: &Log, config:&DatabaseConfig) -> TableData {
+    let pool = get_connection(log, config).await;
+    let select_query = format!("select * from {} limit 1", config.table_name);
     let result = sqlx::query(&select_query).fetch_one(&pool).await;
     match result {
         Ok(row) => {
@@ -103,12 +98,13 @@ pub async fn get_table_data(table_name: &str, log: &Log) -> TableData {
 
             //TODO: add support to extract the actual primary key
             TableData {
-                table_name: table_name.to_string(),
+                table_name: config.table_name.to_string(),
                 columns: column_names,
                 primary_key: "id".to_string(),
             }
         },
         Err(error) => {
+            log.error(&format!("executing query: {}", select_query));
             panic!("error occurred while fetching table data from {:?}", error);
         },
     }

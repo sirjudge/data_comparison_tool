@@ -40,38 +40,41 @@ pub fn sqlite_row_to_string_vec(row:&SqliteRow, log: &Log) -> Vec<String> {
     csv_row
 }
 
-pub fn export_comparison_data_to_csv(result: &ComparisonData, output_file_name: &str, log: &Log) {
-    if !result.unique_table_1_rows.is_empty() {
-        let unique_table_1_row_file_name = format!("unique_table_1_rows_{}", output_file_name);
-        let mut unique_writer = csv::Writer::from_path(unique_table_1_row_file_name).unwrap();
-        for row in result.unique_table_1_rows.iter(){
+fn write_sqlite_vec_to_file(
+    sqlite_rows: &[SqliteRow],
+    log: &Log,
+    output_file_name: &str,
+
+){
+    if sqlite_rows.is_empty(){
+        log.warn(&format!("Sqlite rows passed in are empty, no need to log to {}",output_file_name));
+        return;
+    }
+
+    if !sqlite_rows.is_empty() {
+        // open csv writer
+        let unique_table_1_row_file_name =
+            format!("unique_table_1_rows_{}", output_file_name);
+        let mut unique_writer =
+            csv::Writer::from_path(unique_table_1_row_file_name).unwrap();
+
+        // extract the rows and write each line
+        for row in sqlite_rows.iter(){
             let row = sqlite_row_to_string_vec(row, log);
             unique_writer.write_record(row).unwrap();
         }
 
+        // flush the current buffer to file and drop the writer
         unique_writer.flush().unwrap();
         drop(unique_writer);
     }
+}
 
-    if !result.unique_table_2_rows.is_empty() {
-        let unique_table_2_row_file_name = format!("unique_table_2_rows_{}", output_file_name);
-        let mut unique_writer2 = csv::Writer::from_path(unique_table_2_row_file_name).unwrap();
-        for row in result.unique_table_2_rows.iter(){
-            let row = sqlite_row_to_string_vec(row, log);
-            unique_writer2 .write_record(row).unwrap();
-        }
-        unique_writer2.flush().unwrap();
-        drop(unique_writer2);
-    }
+/// takes a given ComparisonData object and extracts it to 0 - 3
+/// files if the given input data is a non empty Vec
+pub fn export(result: &ComparisonData, output_file_name: &str, log: &Log) {
 
-    if !result.changed_rows.is_empty() {
-        let changed_rows_file_name = format!("changed_rows_{}", output_file_name);
-        let mut changed_writer = csv::Writer::from_path(changed_rows_file_name).unwrap();
-        for row in result.changed_rows.iter(){
-            let row = sqlite_row_to_string_vec(row, log);
-            changed_writer.write_record(row).unwrap();
-        }
-        changed_writer.flush().unwrap();
-        drop(changed_writer);
-    }
+    write_sqlite_vec_to_file(&result.unique_table_1_rows,log, output_file_name);
+    write_sqlite_vec_to_file(&result.unique_table_2_rows,log, output_file_name);
+    write_sqlite_vec_to_file(&result.changed_rows,log, output_file_name);
 }

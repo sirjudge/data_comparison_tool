@@ -12,11 +12,11 @@ pub mod models {
 }
 
 pub mod interface {
-    pub mod argument_parser;
     pub mod tui;
     pub mod state;
     pub mod log_options;
     pub mod log;
+    pub mod config;
 }
 
 pub mod processor;

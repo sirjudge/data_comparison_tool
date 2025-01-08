@@ -1,23 +1,38 @@
-test-release:
+test:
+	make clean-logs
+	cargo test
+
+test-full-clean:
+	make clean
+	make docker-build
+	cargo test
+
+binary-release:
+	make clean-logs
 	cargo build  --release
-	RUST_BACKTRACE=1 ./target/release/data_comparison_tool -t1=test_1 -t2=test_2 -gen=100 -output=test.csv
+	./target/release/data_comparison_tool -t1=test_1 -t2=test_2 -gen=100 -output=test.csv -config=src/comparison_default.toml
 
-test-release-terminal:
+binary-release-terminal:
+	make clean-logs
 	cargo build --release
-	RUST_BACKTRACE=1 ./target/release/data_comparison_tool -t1=test_1 -t2=test_2 -gen=100 -output=test.csv -tui
+	./target/release/data_comparison_tool -t1=test_1 -t2=test_2 -gen=100 -output=test.csv -config=src/comparison_default.toml -tui
 
-test-debug:
+binary-debug:
+	make clean-logs
 	cargo build
-	RUST_BACKTRACE=1 ./target/debug/data_comparison_tool -t1=test_1 -t2=test_2 -gen=100 -output=test.csv
+	RUST_BACKTRACE=1 ./target/debug/data_comparison_tool -t1=test_1 -t2=test_2 -gen=100 -output=test.csv -config=src/comparison_default.toml
 
-test-debug-terminal:
+binary-debug-terminal:
+	make clean-logs
 	cargo build
-	RUST_BACKTRACE=1 ./target/debug/data_comparison_tool -t1=test_1 -t2=test_2 -gen=100 -output=test.csv -tui
+	RUST_BACKTRACE=1 ./target/debug/data_comparison_tool -t1=test_1 -t2=test_2 -gen=100 -output=test.csv -tui -v
 
 build-debug:
+	docker-build
 	cargo build
 
 build-release:
+	docker-build
 	cargo build --release
 
 docker-build:
@@ -35,7 +50,7 @@ clean-logs:
 
 clean-output:
 	rm -f *.csv
-	rm -f *.sqolite*
+	rm -f *.sqlite*
 
 profile-release-build:
 	cargo build --release --timings

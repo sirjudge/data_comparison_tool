@@ -25,5 +25,15 @@ impl ComparisonData {
             changed_rows: changed_rows_data,
         }
     }
-}
 
+    /// intializes each comparison data as empty data to handle edge cases
+    /// where a comparison is not possible or if the tables are completely
+    /// the same
+    pub fn empty_data() -> ComparisonData{
+        ComparisonData {
+            unique_table_1_rows: Vec::new(),
+            unique_table_2_rows :Vec::new(),
+            changed_rows : Vec::new()
+        }
+    }
+}
