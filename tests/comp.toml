@@ -15,7 +15,7 @@ log_file = "test.log"
 verbose = true
 help = false
 auto_yes = true
-log_output_type = "File"
+log_output_type = "Console"
 
 [database_1_config]
 database_type="MySql"

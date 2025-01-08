@@ -128,24 +128,31 @@ impl Default for Config {
 }
 
 impl Config {
-    pub fn new() -> Config {
-        // if we have -config flag, parse the config file first before
-        // applying cli arguments
-        let args: Vec<String>= std::env::args().collect();
-        if args.contains(&"-config".to_string()) {
-            let config_index = args.iter().position(|x| x == "-config").unwrap();
-            let config_file = &args[config_index + 1];
-            Config::from_config_file(config_file);
+    pub fn new_from_file(config_path: &str) -> Config {
+        if config_path.is_empty() {
+            panic!("cannot create new config, config_path string is empty");
         }
 
-        Config::from_arguments()
+        Config::from_config_file(config_path)
     }
 
-    pub fn from_config_file(config_file_path: &str) -> Config {
+    pub fn new() -> Config {
+        //TODO: This is super hacky and not ideal to parse args and then overwrite
+        //them with the config file. Figure out something better later, this is
+        //to get this working again
+
+
+        let argument_config = Config::from_arguments();
+        if argument_config.globals.config_file_path.is_empty() {
+            return argument_config;
+        }
+
+        Config::from_config_file(&argument_config.globals.config_file_path)
+    }
+
+    fn from_config_file(config_file_path: &str) -> Config {
         // load config file into a a string
         match std::fs::read_to_string(config_file_path){
-
-
             Ok(config_string) => {
                 // if we successfully read into a string parse the toml
                 let verbose = true;
@@ -178,7 +185,7 @@ impl Config {
     /// config with the arguments applied. If the -config flag is passed in it
     /// will parse the config file first and then overwrite the file options
     /// with any CLI flags passed in
-    pub fn from_arguments() -> Config {
+    fn from_arguments() -> Config {
         println!("Parsing CLI arguments");
         let mut config: Config = Config::default();
         let args: Vec<String> = std::env::args().collect();
@@ -199,6 +206,7 @@ impl Config {
                     "-t1" => config.database_1_config.table_name = value.to_string(),
                     "-t2" => config.database_2_config.table_name = value.to_string(),
                     "-output" => config.comparison_options.output_file_name = value.to_string(),
+                    "-config" => config.globals.config_file_path = value.to_string(),
                     "-gen" => {
                         config.data_generation.generate_data = true;
                         config.data_generation.number_of_rows_to_generate = value.parse().unwrap();
@@ -290,8 +298,6 @@ impl Config {
         // initialize empty list of strings for
         // any errors that happen during validation
         let mut errors: Vec<String> = Vec::new();
-
-        println!();
         println!("{}BEGIN VALIDATION{}", "=".repeat(10), "=".repeat(10));
         println!();
         // database connection validation
@@ -318,6 +324,7 @@ impl Config {
         println!();
         println!("{}END VALIDATION{}", "=".repeat(10), "=".repeat(10));
 
+        // finally return any runtime validation errors
         errors
     }
 }

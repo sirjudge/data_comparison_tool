@@ -10,7 +10,7 @@ test-full-clean:
 binary-release:
 	make clean-logs
 	cargo build  --release
-	./target/release/data_comparison_tool -t1=test_1 -t2=test_2 -gen=100 -output=test.csv
+	./target/release/data_comparison_tool -t1=test_1 -t2=test_2 -gen=100 -output=test.csv -config=src/comparison_default.toml
 
 binary-release-terminal:
 	make clean-logs
