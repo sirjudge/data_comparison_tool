@@ -186,7 +186,6 @@ impl Config {
     /// will parse the config file first and then overwrite the file options
     /// with any CLI flags passed in
     fn from_arguments() -> Config {
-        println!("Parsing CLI arguments");
         let mut config: Config = Config::default();
         let args: Vec<String> = std::env::args().collect();
 
@@ -299,18 +298,15 @@ impl Config {
         // any errors that happen during validation
         let mut errors: Vec<String> = Vec::new();
         println!("{}BEGIN VALIDATION{}", "=".repeat(10), "=".repeat(10));
-        println!();
         // database connection validation
         let db_1_validation = &mut Self::validate_db_config(&config.database_1_config);
         if !db_1_validation.is_empty() {
             println!("db_1_validation: {:?}", db_1_validation);
-            println!();
             errors.append(db_1_validation);
         }
         let db_2_validation = &mut Self::validate_db_config(&config.database_1_config);
         if !db_2_validation.is_empty() {
             println!("db_2_validation: {:?}", db_2_validation);
-            println!();
             errors.append(db_2_validation);
         }
 
@@ -321,7 +317,6 @@ impl Config {
             println!("Configuration is invalid: {:?}", errors);
         }
         // print any errors that occur during runtime
-        println!();
         println!("{}END VALIDATION{}", "=".repeat(10), "=".repeat(10));
 
         // finally return any runtime validation errors
