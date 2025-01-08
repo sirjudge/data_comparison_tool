@@ -33,3 +33,6 @@ to View the currently saved history of previously run test configurations
 - Add support for `.toml` file test configuration instead of CLI flags or TUI selections
 to be able to save and load test configurations to improve scriptability.
 - Add support for viewing previous run data
+## Better handling of preexisting data
+- currently there are a couple places in the code where comparison data will be overwritten without the option to back up a previous comparison. This isn't a huge deal breaker but definitely has some potential implications to be thought about later
+- In the event of a data confliction where a table already exists, user should be prompted in some way if they want to clean or back up the data before continuing or canceling the current comparison run
