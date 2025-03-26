@@ -22,69 +22,53 @@ use ratatui::{
 };
 use std::{io, io::Stdout};
 
-/// Current state the UI is in
-static mut CURRENT_STATE: UIState = UIState::StartUp;
+/// First, let's create a new struct to hold our UI state
+#[derive(Clone)]
+pub struct TuiState {
+    current_state: UIState,
+    previous_state: UIState,
+    comparison_data: Option<ComparisonData>,
+}
 
-/// Previous state the UI was in. This is used to verify if we have a
-/// state change and handle re-rendering if the two don't match
-static mut PREVIOUS_STATE: UIState = UIState::StartUp;
+impl TuiState {
+    pub fn new() -> Self {
+        Self {
+            current_state: UIState::StartUp,
+            previous_state: UIState::StartUp,
+            comparison_data: None,
+        }
+    }
 
-/// current comparison data to display in the UI or return. This is set
-/// to 'None' at the start in case there's an error and no data should be
-/// returned
-static mut COMPARISON_DATA: Option<ComparisonData> = None;
-
-pub fn set_state(state: UIState, log: &Log) {
-    // set the current state as the previous state and set the current state
-    // to whatever is passed in
-    unsafe {
-        // log the state change
-        let current_state_string = get_string_from_state(get_state());
-        let new_state_string = get_string_from_state(state.clone());
-        let log_message = format!("Setting state to: {:?} from: {:?}",new_state_string,current_state_string);
+    pub fn set_state(&mut self, new_state: UIState, log: &Log) {
+        let log_message = format!(
+            "Setting state to: {:?} from: {:?}",
+            get_string_from_state(new_state.clone()),
+            get_string_from_state(self.current_state.clone())
+        );
         log.debug(&log_message);
 
-        // current state becomes previous state
-        PREVIOUS_STATE = get_state();
-
-        // passed in state becomes the current state
-        CURRENT_STATE = state;
+        self.previous_state = self.current_state.clone();
+        self.current_state = new_state;
     }
-}
 
-pub fn get_state() -> UIState {
-    unsafe {
-        CURRENT_STATE.clone()
+    pub fn get_state(&self) -> UIState {
+        self.current_state.clone()
     }
-}
 
-pub fn get_prev_state() -> UIState {
-    unsafe {
-        PREVIOUS_STATE.clone()
+    pub fn get_prev_state(&self) -> UIState {
+        self.previous_state.clone()
     }
-}
 
-pub fn set_comparison_data(data: ComparisonData) {
-    unsafe {
-        COMPARISON_DATA = Some(data);
+    pub fn set_comparison_data(&mut self, data: ComparisonData) {
+        self.comparison_data = Some(data);
     }
-}
 
-// TODO: the rust-analyzer suggests that we should use addr_or!()
-// here instead to create a raw pointer
-// doing that would require changing the signature of this
-// which then causes the fact that ComparisonData does not have the
-// clone or copy trait on the sqlx types. This is a bit of a rabbit hole
-pub fn get_comparison_data() -> Option<&'static ComparisonData> {
-    unsafe {
-        match &COMPARISON_DATA {
-            Some(data) => {
-                Some(data)
-            }
-            None => {
-                None
-            }
-        }
+    pub fn get_comparison_data(&self) -> Option<&ComparisonData> {
+        self.comparison_data.as_ref()
+    }
+
+    pub fn has_state_changed(&self) -> bool {
+        self.current_state != self.previous_state
     }
 }
 
@@ -94,20 +78,21 @@ fn draw_and_handle_state(
     terminal: &mut ratatui::Terminal<CrosstermBackend<Stdout>>,
     log: &Log,
     config: &Config,
+    state: &mut TuiState,
 ) -> Result<(), std::io::Error> {
     // if state is startup, do start up stuff
-    if get_state() == UIState::StartUp {
+    if state.get_state() == UIState::StartUp {
         log.debug("performing terminal initialization tasks");
-        set_state(UIState::MainMenu, log);
-        terminal.draw(draw_main_menu)?;
+        state.set_state(UIState::MainMenu, log);
+        terminal.draw(|f| draw_main_menu(f, state))?;
         return Ok(());
     }
 
-    // if the previous state and current state are the same
-    if get_prev_state() == get_state() {
+    // if no state change, return early
+    if !state.has_state_changed() {
         let log_message = format!(
             "no state change detected, returning ok. Current state: {}",
-            get_string_from_state(get_state())
+            get_string_from_state(state.get_state())
         );
         log.debug(&log_message);
         return Ok(());
@@ -117,8 +102,8 @@ fn draw_and_handle_state(
     log.debug(
         &format!(
             "State change detected, pev_state:{} current_state:{}",
-            get_string_from_state(get_state()),
-            get_string_from_state(get_prev_state())
+            get_string_from_state(state.get_state()),
+            get_string_from_state(state.get_prev_state())
         )
     );
 
@@ -126,10 +111,10 @@ fn draw_and_handle_state(
     terminal.clear()?;
 
     // match on the current state and render the appropriate new UI
-    match get_state() {
+    match state.get_state() {
         UIState::StartUp | UIState::MainMenu => {
             log.debug("performing terminal initialization tasks");
-            terminal.draw(draw_main_menu)?;
+            terminal.draw(|f| draw_main_menu(f, state))?;
         }
         UIState::Running => {
             terminal.draw(draw_running)?;
@@ -138,9 +123,9 @@ fn draw_and_handle_state(
             // here to avoid lifetime and ownership conflictions
             let comparison_data =
                 processor::run(config, log);
-            set_comparison_data(comparison_data);
+            state.set_comparison_data(comparison_data);
             log.debug("comparison complete, setting state to results");
-            set_state(UIState::Results, log);
+            state.set_state(UIState::Results, log);
             terminal.clear()?;
             terminal.draw(draw_results)?;
         }
@@ -157,13 +142,13 @@ fn draw_and_handle_state(
     Ok(())
 }
 
-fn handle_main_menu_keys(key: KeyCode, log: &Log) {
+fn handle_main_menu_keys(key: KeyCode, log: &Log, state: &mut TuiState) {
     match key {
         KeyCode::Char('s') => {
-            set_state(UIState::Running, log);
+            state.set_state(UIState::Running, log);
         }
         KeyCode::Char('q') => {
-            set_state(UIState::TearDown, log);
+            state.set_state(UIState::TearDown, log);
         }
         _ => {
             log.warn(&format!(
@@ -174,10 +159,10 @@ fn handle_main_menu_keys(key: KeyCode, log: &Log) {
     }
 }
 
-fn runtime_key_events(key: KeyCode, log: &Log) {
+fn runtime_key_events(key: KeyCode, log: &Log, state: &mut TuiState) {
     match key {
         KeyCode::Char('q') => {
-            set_state(UIState::TearDown, log);
+            state.set_state(UIState::TearDown, log);
         }
         _ => {
             log.warn(&format!("unrecognized runtime menu Key pressed: {:?}", key));
@@ -185,13 +170,13 @@ fn runtime_key_events(key: KeyCode, log: &Log) {
     }
 }
 
-fn result_key_events(key: KeyCode, log: &Log) {
+fn result_key_events(key: KeyCode, log: &Log, state: &mut TuiState) {
     match key {
         KeyCode::Char('q') => {
-            set_state(UIState::TearDown, log);
+            state.set_state(UIState::TearDown, log);
         }
         KeyCode::Char('m') => {
-            set_state(UIState::MainMenu, log);
+            state.set_state(UIState::MainMenu, log);
         }
         _ => {
             log.warn(&format!("unrecognized results menu Key pressed: {:?}", key));
@@ -202,32 +187,28 @@ fn result_key_events(key: KeyCode, log: &Log) {
 /// Initialize the terminal UI, run start up tasks, and then display
 /// the main menu to the user
 pub fn run_terminal(config: &Config, log: &Log) -> io::Result<()> {
-    // initialize terminal and state of the UI and set the state to main menu
     let mut terminal = ratatui::init();
+    let mut tui_state = TuiState::new();
     log.debug("ratatui Terminal initialized");
-    //BUG: the following key presses cause a crash from a table already existing
-    //Main menu > running > results > main menu > running
-    // this is probably an error with the table name for either
-    // mysql or sqlite not being re-initialized
+
     loop {
-        // handle and render the current state and after the state has changed hanlde key events
-        match draw_and_handle_state(&mut terminal, log, config) {
+        match draw_and_handle_state(&mut terminal, log, config, &mut tui_state) {
             Ok(()) => {
                 log.info(&format!("current state: {:?}",
-                    get_string_from_state(get_state())
+                    get_string_from_state(tui_state.get_state())
                 ));
                 if let Event::Key(key) = event::read()? {
                     if key.kind == KeyEventKind::Press {
-                        match get_state() {
+                        match tui_state.get_state() {
                             UIState::MainMenu => {
-                                handle_main_menu_keys(key.code, log);
+                                handle_main_menu_keys(key.code, log, &mut tui_state);
                             }
                             UIState::Running => {
                                 log.info("running state key press detected");
-                                runtime_key_events(key.code, log);
+                                runtime_key_events(key.code, log, &mut tui_state);
                             }
                             UIState::Results => {
-                                result_key_events(key.code, log);
+                                result_key_events(key.code, log, &mut tui_state);
                             }
                             _ => {
                                 log.warn(&format!("unrecognized Key pressed: {:?}", key.code));
@@ -242,48 +223,46 @@ pub fn run_terminal(config: &Config, log: &Log) -> io::Result<()> {
             }
         }
 
-        // if we're still in the tear down state at the end of the loop
-        // break and finish execution
-        if get_state() == UIState::TearDown {
+        if tui_state.get_state() == UIState::TearDown {
             break;
         }
     }
 
-    // Post TUI run clean up by clearing terminal and returning Ok
     terminal.clear()?;
     Ok(())
 }
 
 /// handle rendering of the comparison results in a nice little
 /// table
-fn draw_results(frame: &mut Frame) {
-    // create widget data
-    let comparison_data = get_comparison_data().unwrap();
-    let unique_table_1_rows_str = comparison_data.unique_table_1_rows.len().to_string();
-    let unique_table_2_rows_str = comparison_data.unique_table_2_rows.len().to_string();
-    let changed_rows_str = comparison_data.changed_rows.len().to_string();
+fn draw_results(frame: &mut Frame, state: &TuiState) {
+    if let Some(comparison_data) = state.get_comparison_data() {
+        // create widget data
+        let unique_table_1_rows_str = comparison_data.unique_table_1_rows.len().to_string();
+        let unique_table_2_rows_str = comparison_data.unique_table_2_rows.len().to_string();
+        let changed_rows_str = comparison_data.changed_rows.len().to_string();
 
-    // initialize the rows of the table
-    let rows = [
-        Row::new(vec!["Results:"]),
-        Row::new(vec!["Unique Table 1 rows", &unique_table_1_rows_str]),
-        Row::new(vec!["Unique Table 2 rows", &unique_table_2_rows_str]),
-        Row::new(vec!["Changed rows", &changed_rows_str]),
-        Row::new(vec!["Press [q] to exit"]),
-        Row::new(vec!["Press [m] to return to the main menu"]),
-    ];
+        // initialize the rows of the table
+        let rows = [
+            Row::new(vec!["Results:"]),
+            Row::new(vec!["Unique Table 1 rows", &unique_table_1_rows_str]),
+            Row::new(vec!["Unique Table 2 rows", &unique_table_2_rows_str]),
+            Row::new(vec!["Changed rows", &changed_rows_str]),
+            Row::new(vec!["Press [q] to exit"]),
+            Row::new(vec!["Press [m] to return to the main menu"]),
+        ];
 
-    // set column widths
-    let column_1_width = Constraint::Length(20);
-    let column_2_width = Constraint::Length(20);
-    let widths = [column_1_width, column_2_width];
+        // set column widths
+        let column_1_width = Constraint::Length(20);
+        let column_2_width = Constraint::Length(20);
+        let widths = [column_1_width, column_2_width];
 
-    // generate the table widget
-    let table_widget =
-        Table::new(rows, widths)
-        .block(Block::default());
+        // generate the table widget
+        let table_widget =
+            Table::new(rows, widths)
+            .block(Block::default());
 
-    frame.render_widget(table_widget, frame.area());
+        frame.render_widget(table_widget, frame.area());
+    }
 }
 
 /// Calculate the layout of the UI elements.
@@ -324,7 +303,7 @@ fn draw_running(frame: &mut Frame) {
 }
 
 /// Render the main menu of the terminal UI
-fn draw_main_menu(frame: &mut Frame) {
+fn draw_main_menu(frame: &mut Frame, state: &TuiState) {
     // init possible items
     let items = ["[S]tart", "[Q]uit"];
 

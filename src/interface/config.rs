@@ -1,15 +1,16 @@
 use toml;
 use serde::Deserialize;
 use crate::interface::log_options::LogOutput;
- use chrono::Local;
+use chrono::Local;
+use crate::interface::log::Log;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub enum DatabaseType {
     MySql,
     Sqlite
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Config {
     pub comparison_options: ComparisonOptions,
     pub log_config: LogConfig,
@@ -19,14 +20,14 @@ pub struct Config {
     pub globals: Globals
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Globals {
     pub tui: bool,
     pub version: bool,
     pub config_file_path: String
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct ComparisonOptions{
     pub output_file_name: String,
     pub output_file_type: OutputFileType,
@@ -35,7 +36,7 @@ pub struct ComparisonOptions{
     pub clean: bool
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct LogConfig {
     pub log_file: String,
     pub log_level: String,
@@ -45,7 +46,7 @@ pub struct LogConfig {
     pub log_output_type: LogOutput,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct DatabaseConfig {
     // connection level
     pub db_name: String,
@@ -60,13 +61,13 @@ pub struct DatabaseConfig {
     pub database_type: DatabaseType,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub enum OutputFileType {
     Csv,
     Json
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct DataGeneration {
     pub generate_data: bool,
     pub number_of_rows_to_generate: i32,
@@ -304,7 +305,7 @@ impl Config {
             println!("db_1_validation: {:?}", db_1_validation);
             errors.append(db_1_validation);
         }
-        let db_2_validation = &mut Self::validate_db_config(&config.database_1_config);
+        let db_2_validation = &mut Self::validate_db_config(&config.database_2_config);
         if !db_2_validation.is_empty() {
             println!("db_2_validation: {:?}", db_2_validation);
             errors.append(db_2_validation);
@@ -321,5 +322,41 @@ impl Config {
 
         // finally return any runtime validation errors
         errors
+    }
+
+    pub fn print_help(&self, log: &Log) {
+        log.info("Help requested! This is a tool to help compare large data sets between mysql and sqlite");
+        log.info("Usage: data_comparison");
+        log.info("\t-h : print this help message");
+        log.info("\t-help : print this help message");
+        log.info("\t-tui : run with terminal ui");
+        log.info("\t-q1=<query> : specify a first mysql query to run");
+        log.info("\t-q2=<query> : specify a second mysql query to run");
+        log.info("\t-gen : generate new data in mysql");
+        log.info("\t-verbose : verbose output");
+        log.info("\t-version : print version information");
+        log.info("\t-c : clean sqlite database");
+        log.info("\t-t1=<table_name> : specify the name of the first table to compare");
+        log.info("\t-t2=<table_name> : specify the name of the second table to compare");
+        log.info("\t-in-memory : use an in memory sqlite database instead of file based");
+        log.info("\t-create-in-flight : create sqlite comparison files while in flight");
+        log.info("\t-auto-yes : automatically answer yes to all prompts");
+        log.info("\t-output=<output_file> : specify the name of the output csv file");
+    }
+
+    pub fn print_config(&self, log: &Log) {
+        log.info("Configuration:");
+        log.info(&format!("database 1 db_name: {}", self.database_1_config.db_name));
+        log.info(&format!("database 1 host: {}", self.database_1_config.db_host));
+        log.info(&format!("database 2 db_name: {}", self.database_2_config.db_name));
+        log.info(&format!("database 2 host: {}", self.database_2_config.db_host));
+        log.info(&format!("table 1: {}", self.database_1_config.table_name));
+        log.info(&format!("table 2: {}", self.database_2_config.table_name));
+        log.info(&format!("output file name: {}", self.comparison_options.output_file_name));
+        log.info(&format!("create sqlite comparison files: {}", self.comparison_options.create_sqlite_comparison_files));
+        log.info(&format!("in memory sqlite: {}", self.comparison_options.in_memory_sqlite));
+        log.info(&format!("clean: {}", self.comparison_options.clean));
+        log.info(&format!("data generation: {}", self.data_generation.generate_data));
+        log.info(&format!("number of rows to generate: {}", self.data_generation.number_of_rows_to_generate));
     }
 }
