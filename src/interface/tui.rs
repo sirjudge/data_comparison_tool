@@ -117,9 +117,9 @@ fn draw_and_handle_state(
             terminal.draw(|f| draw_main_menu(f, state))?;
         }
         UIState::Running => {
-            terminal.draw(draw_running)?;
+            terminal.draw(|f| draw_running(f))?;
 
-            // TOOD: This should be done in draw_running but is done
+            // TODO: This should be done in draw_running but is done
             // here to avoid lifetime and ownership conflictions
             let comparison_data =
                 processor::run(config, log);
@@ -127,10 +127,10 @@ fn draw_and_handle_state(
             log.debug("comparison complete, setting state to results");
             state.set_state(UIState::Results, log);
             terminal.clear()?;
-            terminal.draw(draw_results)?;
+            terminal.draw(|f| draw_results(f, state))?;
         }
         UIState::Results => {
-            terminal.draw(draw_results)?;
+            terminal.draw(|f| draw_results(f, state))?;
         }
         UIState::TearDown => {
             log.debug("Tearing down terminal and quitting");

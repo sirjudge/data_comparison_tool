@@ -73,8 +73,39 @@ fn write_sqlite_vec_to_file(
 /// takes a given ComparisonData object and extracts it to 0 - 3
 /// files if the given input data is a non empty Vec
 pub fn export(result: &ComparisonData, output_file_name: &str, log: &Log) {
+    // Export unique table 1 rows
+    if !result.unique_table_1_rows.is_empty() {
+        let file_name = format!("unique_table_1_rows_{}", output_file_name);
+        let mut writer = csv::Writer::from_path(file_name).unwrap();
+        
+        for row in &result.unique_table_1_rows {
+            writer.write_record(&row.row).unwrap();
+        }
+        writer.flush().unwrap();
+    }
 
-    write_sqlite_vec_to_file(&result.unique_table_1_rows,log, output_file_name);
-    write_sqlite_vec_to_file(&result.unique_table_2_rows,log, output_file_name);
-    write_sqlite_vec_to_file(&result.changed_rows,log, output_file_name);
+    // Export unique table 2 rows
+    if !result.unique_table_2_rows.is_empty() {
+        let file_name = format!("unique_table_2_rows_{}", output_file_name);
+        let mut writer = csv::Writer::from_path(file_name).unwrap();
+        
+        for row in &result.unique_table_2_rows {
+            writer.write_record(&row.row).unwrap();
+        }
+        writer.flush().unwrap();
+    }
+
+    // Export changed rows
+    if !result.changed_rows.is_empty() {
+        let file_name = format!("changed_rows_{}", output_file_name);
+        let mut writer = csv::Writer::from_path(file_name).unwrap();
+        
+        for row in &result.changed_rows {
+            // Combine both rows with some separator to show the changes
+            let mut combined = row.table_1_row.clone();
+            combined.extend(row.table_2_row.clone());
+            writer.write_record(combined).unwrap();
+        }
+        writer.flush().unwrap();
+    }
 }
